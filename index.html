@@ -1,0 +1,2727 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>도무스 MES</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root{
+    --bg:#f4f5f7; --surface:#ffffff; --surface-2:#f0f2f5; --surface-3:#e8ebef;
+    --border:#e1e5ea; --text:#1b222b; --text-muted:#69727e; --text-faint:#98a1ac;
+    --accent:#2f6fe0; --accent-soft:#e8f0fe;
+    --urgent:#d9382e; --urgent-soft:#fbe9e8;
+    --danger:#d9382e; --danger-soft:rgba(217,56,46,.08);
+    --ok:#128a63; --ok-soft:rgba(18,138,99,.10);
+    --warn:#b8740a; --warn-soft:rgba(184,116,10,.12);
+    --good:#0ca30c; --warning:#fab219; --critical:#d03b3b;
+    --warning-soft:rgba(250,178,25,.14); --critical-soft:rgba(208,59,59,.10);
+    --status-done:#7c8794; --status-done-soft:rgba(124,135,148,.14);
+    --done-bg:#eef1f4; --done-text:#98a1ac;
+    --overlay:rgba(6,8,10,.6);
+    --shadow: 0 1px 2px rgba(20,26,33,.05), 0 8px 24px rgba(20,26,33,.04);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#12161b; --surface:#1b2129; --surface-2:#232b34; --surface-3:#2a333d;
+      --border:#2e3742; --text:#eaedf1; --text-muted:#8d97a4; --text-faint:#5c6672;
+      --accent:#5b9dff; --accent-soft:rgba(91,157,255,.14);
+      --urgent:#f35e52; --urgent-soft:rgba(243,94,82,.14);
+      --danger:#f35e52; --danger-soft:rgba(243,94,82,.12);
+      --ok:#34d399; --ok-soft:rgba(52,211,153,.14);
+      --warn:#f5a524; --warn-soft:rgba(245,165,36,.16);
+      --good:#0ca30c; --warning:#fab219; --critical:#e66767;
+      --warning-soft:rgba(250,178,25,.16); --critical-soft:rgba(230,103,103,.14);
+      --status-done:#7c8794; --status-done-soft:rgba(124,135,148,.14);
+      --done-bg:#1f242b; --done-text:#5c6672;
+      --overlay:rgba(6,8,10,.6);
+      --shadow: 0 8px 24px rgba(0,0,0,.3);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#12161b; --surface:#1b2129; --surface-2:#232b34; --surface-3:#2a333d;
+    --border:#2e3742; --text:#eaedf1; --text-muted:#8d97a4; --text-faint:#5c6672;
+    --accent:#5b9dff; --accent-soft:rgba(91,157,255,.14);
+    --urgent:#f35e52; --urgent-soft:rgba(243,94,82,.14);
+    --danger:#f35e52; --danger-soft:rgba(243,94,82,.12);
+    --ok:#34d399; --ok-soft:rgba(52,211,153,.14);
+    --warn:#f5a524; --warn-soft:rgba(245,165,36,.16);
+    --good:#0ca30c; --warning:#fab219; --critical:#e66767;
+    --warning-soft:rgba(250,178,25,.16); --critical-soft:rgba(230,103,103,.14);
+    --status-done:#7c8794; --status-done-soft:rgba(124,135,148,.14);
+    --done-bg:#1f242b; --done-text:#5c6672;
+    --overlay:rgba(6,8,10,.6);
+    --shadow: 0 8px 24px rgba(0,0,0,.3);
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:'IBM Plex Sans KR','Pretendard','Malgun Gothic',sans-serif;
+  }
+  .mono{ font-family:'IBM Plex Mono','IBM Plex Sans KR',monospace; font-variant-numeric:tabular-nums; }
+
+  /* ---------------- login screen ---------------- */
+  #loginScreen{
+    position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+    background:var(--bg); z-index:100;
+  }
+  #loginScreen[hidden]{ display:none; }
+  .login-card{
+    background:var(--surface); border:1px solid var(--border); border-radius:18px;
+    box-shadow:var(--shadow); padding:40px 36px; width:100%; max-width:380px;
+    display:flex; flex-direction:column; gap:22px; align-items:center; text-align:center;
+  }
+  .login-card .mark{ font-weight:700; font-size:14px; letter-spacing:.16em; color:var(--accent); text-transform:uppercase; }
+  .login-card h1{ margin:0; font-size:24px; font-weight:700; }
+  .login-card .sub{ font-size:13px; color:var(--text-faint); margin-top:-10px; }
+  .login-buttons{ display:flex; flex-direction:column; gap:12px; width:100%; }
+  .login-btn{
+    width:100%; padding:16px 18px; border-radius:12px; border:1px solid var(--border);
+    background:var(--surface-2); color:var(--text); font-size:15px; font-weight:700; cursor:pointer;
+    font-family:inherit; display:flex; align-items:center; justify-content:center; gap:8px;
+    transition:background .12s ease, border-color .12s ease;
+  }
+  .login-btn:hover{ background:var(--surface-3); }
+  .login-btn.owner{ background:var(--accent); border-color:var(--accent); color:#fff; }
+  .login-btn.owner:hover{ filter:brightness(1.05); }
+  .login-btn .role-icon{ font-size:17px; }
+  .login-foot{ font-size:11px; color:var(--text-faint); }
+
+  /* ---------------- app shell ---------------- */
+  #appShell{ display:flex; height:100vh; width:100%; }
+  #appShell[hidden]{ display:none; }
+
+  .sidebar{
+    flex:none; width:232px; background:var(--surface); border-right:1px solid var(--border);
+    display:flex; flex-direction:column; height:100%; overflow-y:auto;
+  }
+  .sidebar-brand{
+    padding:20px 18px 14px; display:flex; flex-direction:column; gap:2px;
+    border-bottom:1px solid var(--border);
+  }
+  .sidebar-brand .mark{ font-weight:700; font-size:13px; letter-spacing:.16em; color:var(--accent); text-transform:uppercase; }
+  .sidebar-brand .name{ font-size:16px; font-weight:700; }
+
+  .nav-group{ padding:10px 10px 4px; display:flex; flex-direction:column; gap:2px; }
+  .nav-label{ font-size:10.5px; font-weight:700; color:var(--text-faint); text-transform:uppercase; letter-spacing:.05em; padding:10px 10px 4px; }
+  .nav-btn{
+    display:flex; align-items:center; gap:10px; width:100%; text-align:left;
+    padding:10px 12px; border-radius:10px; border:none; background:transparent;
+    color:var(--text-muted); font-size:13.5px; font-weight:600; cursor:pointer; font-family:inherit;
+  }
+  .nav-btn:hover{ background:var(--surface-2); color:var(--text); }
+  .nav-btn.active{ background:var(--accent-soft); color:var(--accent); }
+  .nav-btn .ic{ font-size:15px; flex:none; width:18px; text-align:center; }
+
+  .sidebar-foot{
+    margin-top:auto; padding:14px 16px; border-top:1px solid var(--border);
+    display:flex; flex-direction:column; gap:10px;
+  }
+  .role-indicator{ font-size:12px; color:var(--text-faint); display:flex; align-items:center; gap:6px; }
+  .role-indicator b{ color:var(--text); }
+  .logout-btn{
+    padding:9px 12px; border-radius:9px; border:1px solid var(--border); background:var(--surface-2);
+    color:var(--text); font-size:12.5px; font-weight:600; cursor:pointer; font-family:inherit;
+  }
+  .logout-btn:hover{ background:var(--surface-3); }
+
+  .main{ flex:1; min-width:0; height:100%; overflow-y:auto; background:var(--bg); }
+  .view-slot{ position:relative; min-height:100%; }
+  .view-page{ min-height:100%; }
+  .view-page[hidden]{ display:none; }
+
+  #appShell.sidebar-hidden .sidebar{ display:none; }
+  .sidebar-toggle{
+    display:none; position:fixed; left:14px; bottom:14px; z-index:40;
+    width:38px; height:38px; border-radius:10px; border:1px solid var(--border);
+    background:var(--surface-2); color:var(--text); font-size:16px; cursor:pointer;
+    align-items:center; justify-content:center; box-shadow:0 4px 14px rgba(0,0,0,.2);
+  }
+  .sidebar-toggle:hover{ background:var(--surface-3); }
+  #appShell.sidebar-hidden .sidebar-toggle{ display:flex; }
+
+  @media (max-width:860px){
+    .sidebar{ width:76px; }
+    .sidebar-brand .name, .nav-btn span.label, .nav-label, .role-indicator span.role-text{ display:none; }
+    .nav-btn{ justify-content:center; }
+    .logout-btn{ font-size:0; padding:9px; }
+    .logout-btn::before{ content:'⎋'; font-size:14px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="loginScreen">
+  <div class="login-card">
+    <span class="mark">DOMUS</span>
+    <h1>도무스 MES</h1>
+    <div class="sub">로그인할 역할을 선택하세요</div>
+    <div class="login-buttons">
+      <button class="login-btn owner" id="loginOwnerBtn"><span class="role-icon">👑</span> 사장으로 로그인</button>
+      <button class="login-btn" id="loginStaffBtn"><span class="role-icon">👤</span> 직원으로 로그인</button>
+    </div>
+    <div class="login-foot">시안 데모 — 비밀번호 없이 역할만 선택합니다</div>
+  </div>
+</div>
+
+<div id="appShell" hidden>
+  <button class="sidebar-toggle" id="sidebarToggleBtn" title="메뉴 열기">☰</button>
+  <div class="sidebar">
+    <div class="sidebar-brand">
+      <span class="mark">DOMUS</span>
+      <span class="name">도무스 MES</span>
+    </div>
+    <nav class="nav-group" id="navGroup"></nav>
+    <div class="sidebar-foot">
+      <div class="role-indicator">현재 역할: <b id="roleIndicatorText">-</b></div>
+      <button class="logout-btn" id="logoutBtn">로그아웃</button>
+    </div>
+  </div>
+  <div class="main">
+    <div class="view-slot" id="viewSlot">
+      <div class="view-page" data-view="schedule" hidden><domus-schedule-page></domus-schedule-page></div>
+      <div class="view-page" data-view="orderform" hidden><domus-orderform-page></domus-orderform-page></div>
+      <div class="view-page" data-view="sales" hidden><domus-sales-page></domus-sales-page></div>
+      <div class="view-page" data-view="revenue" hidden><domus-revenue-page></domus-revenue-page></div>
+      <div class="view-page" data-view="analytics" hidden><domus-analytics-page></domus-analytics-page></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= templates ================= -->
+<div style="display:none">
+
+<template id="tpl-schedule">
+  <div class="board">
+    <div class="topbar">
+      <div class="brand">
+        <span class="mark">DOMUS</span>
+        <h1>일정표</h1>
+        <span class="sub">발주처별 납품 일정 — TV/모니터 상시 게시용 · 색 = 담당자</span>
+      </div>
+      <div class="topbar-right">
+        <div class="legend" id="repLegend">
+          <span class="legend-item"><span class="dot holiday"></span>휴일/기타</span>
+          <span class="legend-item done-note">완료된 일정은 흐리게 · 취소선</span>
+        </div>
+        <div class="clock">
+          <div class="time mono" id="clockTime">--:--:--</div>
+          <div class="date mono" id="clockDate">----.--.--</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="cal-head">
+        <div class="cal-title">
+          <h2 id="calTitle">2026년 9월</h2>
+          <span class="count" id="calCount">이번 달 0건</span>
+        </div>
+        <div class="cal-nav">
+          <button class="add-holiday-btn" id="addHolidayBtn">+ 휴일/기타 일정</button>
+          <button class="nav-btn" id="prevBtn" aria-label="이전 달">‹</button>
+          <button class="today-btn" id="todayBtn">오늘</button>
+          <button class="nav-btn" id="nextBtn" aria-label="다음 달">›</button>
+        </div>
+      </div>
+      <div class="weekdays">
+        <div class="sun">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div class="sat">토</div>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+    </div>
+
+    <div class="footnote">예시 데이터로 구성된 화면 시안입니다 · 실제 발주처·수치 아님 · 날짜를 클릭하면 상세 일정이 열립니다 · 빨간 날짜는 휴일 · "+ 휴일/기타 일정"으로 직접 등록·삭제 가능 · 색은 담당자 구분(담당자 이름 글자만 색 표시) · 일정 카드의 "수정" 버튼으로 날짜/시각/작업내용/재질/작업량/담당자 변경 및 삭제 가능</div>
+  </div>
+
+  <div class="overlay" id="overlay" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-head">
+        <div>
+          <h3 id="modalTitle">-</h3>
+          <div class="sub" id="modalSub"></div>
+        </div>
+        <button class="close-btn" id="closeBtn" aria-label="닫기">✕</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+    </div>
+  </div>
+
+  <div class="overlay" id="addOverlay" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="addModalTitle">
+      <div class="modal-head">
+        <div><h3 id="addModalTitle">휴일/기타 일정 등록</h3></div>
+        <button class="close-btn" id="addCloseBtn" aria-label="닫기">✕</button>
+      </div>
+      <div class="add-form">
+        <div class="field">
+          <label>날짜</label>
+          <input type="date" id="addDate">
+        </div>
+        <div class="field">
+          <label>구분</label>
+          <div class="chip-row" id="addTypeChips">
+            <div class="chip active" data-v="holiday">휴일(빨간날)</div>
+            <div class="chip" data-v="note">기타 사내 일정</div>
+          </div>
+        </div>
+        <div class="field">
+          <label>내용</label>
+          <input type="text" id="addLabel" placeholder="예: 추석연휴, 전 직원 워크샵">
+        </div>
+        <div class="btn-row">
+          <button class="btn" id="addCancelBtn">취소</button>
+          <button class="btn primary" id="addSaveBtn">등록</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<template id="tpl-sales">
+  <div class="page">
+    <div class="topbar">
+      <div class="brand">
+        <span class="mark">DOMUS</span>
+        <h1>영업관리</h1>
+      </div>
+      <div class="role-switch" id="roleSwitch">
+        <button class="role-btn" data-role="staff">직원</button>
+        <button class="role-btn" data-role="owner">사장</button>
+      </div>
+    </div>
+    <div class="role-hint" id="roleHint"></div>
+
+    <div class="search-row">
+      <div class="search-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="searchInput" placeholder="브랜드·발주처·점포명으로 검색">
+      </div>
+    </div>
+
+    <div class="client-panel" id="clientPanel"></div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:1%">#</th>
+            <th>발주처</th>
+            <th>담당자</th>
+            <th>수주일</th>
+            <th>다음 일정</th>
+            <th style="text-align:right">견적금액</th>
+          </tr>
+        </thead>
+        <tbody id="orderRows"></tbody>
+      </table>
+    </div>
+  </div>
+</template>
+
+<template id="tpl-orderform">
+  <div class="page">
+    <div class="topbar">
+      <span class="mark">DOMUS</span>
+      <h1>발주처 건 등록</h1>
+    </div>
+
+    <div class="card">
+      <h2>기본정보</h2>
+      <div class="field-grid">
+        <div class="field">
+          <label>브랜드<span class="req">*</span></label>
+          <input id="f-brand" list="brandList" placeholder="목록에서 선택하거나 새로 입력">
+          <datalist id="brandList"></datalist>
+          <span class="hint" id="brandNewHint"></span>
+        </div>
+        <div class="field">
+          <label>발주처<span class="req">*</span></label>
+          <input id="f-client" list="clientList" placeholder="목록에서 선택하거나 새로 입력">
+          <datalist id="clientList"></datalist>
+          <span class="hint" id="clientNewHint"></span>
+        </div>
+        <div class="field full"><label>점포명<span class="req">*</span></label><input id="f-store" placeholder="예: 강동강일점"></div>
+        <div class="field">
+          <label>담당자</label>
+          <select id="f-rep"></select>
+        </div>
+        <div class="field"><label>수주일<span class="req">*</span></label><input id="f-orderdate" type="date"></div>
+        <div class="field full">
+          <label>수주타입</label>
+          <div class="chip-group" id="orderTypeChips">
+            <div class="chip active" data-v="일반">일반</div>
+            <div class="chip" data-v="긴급">긴급</div>
+          </div>
+        </div>
+        <div class="field full">
+          <label>재질<span class="req">*</span></label>
+          <div class="chip-group" id="materialChips">
+            <div class="chip active" data-v="금속">금속</div>
+            <div class="chip" data-v="목재">목재</div>
+          </div>
+        </div>
+        <div class="field full">
+          <label>수주확정일</label>
+          <input id="f-confirmdate" type="date">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>견적금액</h2>
+      <div class="amount-row">
+        <input id="f-amount" type="text" inputmode="numeric" placeholder="예: 5,200,000">
+        <span class="mono" style="color:var(--text-muted); font-size:13px;">원</span>
+      </div>
+      <div class="amount-note">🔒 이 금액은 입력한 본인과 사장님만 볼 수 있습니다.</div>
+    </div>
+
+    <div class="card">
+      <h2>작업 일정</h2>
+      <div class="task-list" id="taskList"></div>
+      <button class="add-task" id="addTask">+ 일정 추가</button>
+    </div>
+
+    <div class="card">
+      <div class="toggle-row" id="contactToggle">
+        <h2 style="margin:0">연락처 상세 (선택)</h2>
+        <span class="caret">▾</span>
+      </div>
+      <div class="collapsible" id="contactBody">
+        <div class="hint" id="autofillNote" style="display:none">✓ 등록된 발주처 정보를 불러왔습니다 (필요하면 수정하세요)</div>
+        <div class="field-grid">
+          <div class="field full"><label>점포주소</label><input id="f-address" placeholder="예: 서울 강동구 ..."></div>
+          <div class="field"><label>발주처담당자</label><input id="f-clientcontact"></div>
+          <div class="field"><label>전화번호</label><input id="f-clientphone" placeholder="010-0000-0000"></div>
+          <div class="field"><label>인테리어업체</label><input id="f-interior"></div>
+          <div class="field"><label>현장소장</label><input></div>
+          <div class="field"><label>현장소장 전화번호</label><input placeholder="010-0000-0000"></div>
+          <div class="field"><label>점주/매니저</label><input></div>
+          <div class="field"><label>점주/매니저 전화번호</label><input placeholder="010-0000-0000"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>비고</h2>
+      <textarea placeholder="특이사항을 자유롭게 적어주세요"></textarea>
+    </div>
+
+    <div class="save-bar">
+      <button class="btn">취소</button>
+      <button class="btn primary" id="saveBtn">저장</button>
+    </div>
+  </div>
+</template>
+
+<template id="tpl-tasks">
+  <div class="app">
+    <div class="top">
+      <h1>오늘 할 일</h1>
+      <div class="sub">현장 확인용 · 탭 한 번으로 완료 체크</div>
+    </div>
+
+    <div class="daytabs" id="dayTabs"></div>
+
+    <div class="summary">
+      <div class="stat"><div class="num" id="statTotal">0</div><div class="label">오늘 전체</div></div>
+      <div class="stat"><div class="num" id="statDone">0</div><div class="label">완료</div></div>
+      <div class="stat"><div class="num" id="statLeft">0</div><div class="label">남음</div></div>
+    </div>
+
+    <div class="search">
+      <input type="text" id="searchInput" placeholder="발주처 이름으로 찾기...">
+    </div>
+
+    <div class="list" id="taskList"></div>
+
+    <div class="bottom-note">예시 데이터입니다 · 실제 발주처·수치 아님</div>
+  </div>
+</template>
+
+<template id="tpl-revenue">
+  <div class="page">
+    <div class="topbar">
+      <div class="brand">
+        <span class="mark">DOMUS</span>
+        <h1>매출관리</h1>
+        <span class="sub">받을 돈 · 확인 · 입금 여부 — 금액은 사장만, 확인/입금 체크는 직원도 가능</span>
+      </div>
+      <div class="role-switch" id="roleSwitch">
+        <button class="role-btn" data-role="staff">직원으로 보기</button>
+        <button class="role-btn active" data-role="owner">사장으로 보기</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="stat-row" style="margin-bottom:18px">
+        <div class="stat"><div class="label" id="periodLabel">이번 달 확정금액</div><div class="num mono" id="statTotal">-</div></div>
+        <div class="stat"><div class="label">입금완료</div><div class="num mono ok" id="statPaid">-</div></div>
+        <div class="stat"><div class="label">미수금</div><div class="num mono warn" id="statUnpaid">-</div></div>
+        <div class="stat"><div class="label">확인 대기</div><div class="num mono" id="statUnconfirmed">-</div></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h2>내역</h2>
+          <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+            <div class="tabs" id="periodTabs">
+              <button class="tab active" data-p="month">월별</button>
+              <button class="tab" data-p="quarter">분기별</button>
+              <button class="tab" data-p="year">년도별</button>
+              <button class="tab" data-p="brand">브랜드별</button>
+              <button class="tab" data-p="client">발주처별</button>
+            </div>
+            <select class="filter-select" id="brandFilter"></select>
+            <select class="filter-select" id="clientFilter"></select>
+            <select class="filter-select" id="repFilter"></select>
+            <label class="upload-btn">
+              📁 엑셀/CSV 업로드
+              <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" style="display:none">
+            </label>
+            <span class="upload-status" id="uploadStatus"></span>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>날짜</th><th>브랜드</th><th>발주처</th><th>점포명</th><th>담당자</th>
+              <th style="text-align:right">확정금액</th><th class="center">확인</th><th class="center">입금</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+        <div class="foot" id="tableFoot"></div>
+      </div>
+
+      <div class="panel" id="analysisPanel" style="margin-top:18px;">
+        <div class="panel-head">
+          <h2>매출 분석</h2>
+          <span style="font-size:11.5px; color:var(--text-faint)">전체 데이터 기준 · 브랜드 필터 미적용 · 사장 전용</span>
+        </div>
+        <div class="analysis-grid">
+          <div>
+            <div class="chart-title">월별 확정금액 추이</div>
+            <svg id="monthlyChart" width="100%" height="180" viewBox="0 0 560 180" preserveAspectRatio="xMidYMid meet"></svg>
+            <div class="chart-sub" id="monthlyChartSub"></div>
+          </div>
+          <div>
+            <div class="chart-title">브랜드별 매출 비중</div>
+            <table class="mini-table"><tbody id="brandShareBody"></tbody></table>
+          </div>
+        </div>
+        <div class="mini-stats-row">
+          <div class="mini-stat"><div class="mini-label">입금률 (확정 대비)</div><div class="mini-num" id="collectRate">-</div></div>
+          <div class="mini-stat"><div class="mini-label">미입금 건수 · 금액</div><div class="mini-num" id="unpaidSummary">-</div></div>
+          <div class="mini-stat"><div class="mini-label">최다 매출 브랜드</div><div class="mini-num" id="topBrand">-</div></div>
+        </div>
+      </div>
+
+      <div class="panel analysis-locked" id="analysisLocked" style="display:none; margin-top:18px;">
+        🔒 매출 분석은 사장 계정에서만 볼 수 있습니다.
+      </div>
+
+      <div class="panel" id="targetPanel" style="margin-top:18px;">
+        <div class="panel-head">
+          <h2>매출 목표 관리</h2>
+          <div class="tabs" id="targetTabs">
+            <button class="tab active" data-t="month">월간</button>
+            <button class="tab" data-t="quarter">분기</button>
+            <button class="tab" data-t="year">연간</button>
+          </div>
+        </div>
+        <div style="padding:18px;">
+          <div class="target-controls">
+            <input type="text" id="targetKeyInput" placeholder="2026-09">
+            <input type="number" id="targetAmountInput" placeholder="목표 금액(원)">
+            <button class="add-target-btn" id="addTargetBtn">+ 목표 추가</button>
+            <span class="chart-sub" id="targetFormHint">월간 형식: YYYY-MM (예: 2026-09)</span>
+          </div>
+          <table class="target-table">
+            <thead><tr><th>기간</th><th style="text-align:right">목표금액</th><th style="text-align:right">실적</th><th>달성률</th><th></th></tr></thead>
+            <tbody id="targetBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel analysis-locked" id="targetLocked" style="display:none; margin-top:18px;">
+        🔒 매출 목표 관리는 사장 계정에서만 볼 수 있습니다.
+      </div>
+    </div>
+
+    <div class="footnote">예시 데이터로 구성된 화면 시안입니다 · 실제 발주처·금액 아님 · 업로드 파일은 브랜드/발주처/점포명/담당자/확정금액/SET일 등 컬럼명을 자동 인식합니다</div>
+  </div>
+</template>
+
+<template id="tpl-analytics">
+  <div class="page">
+    <div class="topbar">
+      <div class="brand">
+        <div class="row">
+          <span class="mark">DOMUS</span>
+          <h1>경영 분석</h1>
+        </div>
+        <span class="sub">기존 popmes 수주 데이터 908건 분석 (수주일 2025-01-01 ~ 2026-09-07 기준) — 새 MES 완성 전, 지금 데이터로 뽑아본 인사이트</span>
+      </div>
+      <span class="owner-badge">⚠ 거래처 집중도·담당자 업무량 등 민감한 경영 정보 — 사장님 열람 권장</span>
+    </div>
+
+    <div class="kpi-row" id="kpiRow"></div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-head">
+          <h2>월별 수주 추이</h2>
+          <div class="desc">2025-01 ~ 2026-09 · 수주일 기준</div>
+        </div>
+        <div class="panel-body">
+          <svg id="monthlyChart" viewBox="0 0 720 220"></svg>
+        </div>
+        <div class="panel-foot" id="monthlyFoot"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h2>거래처 집중도</h2>
+          <div class="desc">발주처별 수주 건수 · 상위 12곳</div>
+        </div>
+        <div class="panel-body" style="padding-top:8px">
+          <table class="data-table" id="paretoTable"></table>
+        </div>
+        <div class="panel-foot" id="paretoFoot"></div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-head">
+          <h2>브랜드별 "단납" 비율</h2>
+          <div class="desc">상위 10개 브랜드 · 건당 소량·빈번 납품(단납) 성향 비교</div>
+        </div>
+        <div class="panel-body">
+          <svg id="brandChart" viewBox="0 0 640 260"></svg>
+        </div>
+        <div class="panel-foot">단납 비율이 높을수록 소량·빈번 납품 패턴 — 스타벅스(SB)는 절반 이상이 단납으로, 대량 일괄 납품 위주인 K2·파리바게뜨·ND와는 업무 성격이 다름</div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h2>담당자별 업무량</h2>
+          <div class="desc">전체 908건 기준 · 단납 비율 포함</div>
+        </div>
+        <div class="panel-body" style="padding-top:8px">
+          <table class="data-table" id="repTable"></table>
+        </div>
+        <div class="panel-foot">건수만 보면 이현재·박성중이 압도적으로 많아 보이지만, 박성중은 단납(빈번·소량) 비율이 59.4%로 매우 높아 실제 처리 빈도는 건수 이상일 수 있음</div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-head">
+          <h2>요일별 작업 부하</h2>
+          <div class="desc">셋팅일(현장 작업일) 기준 요일 분포</div>
+        </div>
+        <div class="panel-body">
+          <svg id="weekdayChart" viewBox="0 0 480 200"></svg>
+        </div>
+        <div class="panel-foot" id="weekdayFoot"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h2>진행 중 · 특이 건</h2>
+          <div class="desc">미확정(파이프라인) 및 긴급 건</div>
+        </div>
+        <div class="panel-body stack" style="padding-top:12px">
+          <div>
+            <div class="callout" style="margin-bottom:8px"><b>미확정 8건</b>&nbsp;— 아직 "등록" 상태로, 확정되지 않은 진행 중 건</div>
+            <table class="data-table" id="pipelineTable"></table>
+          </div>
+          <div>
+            <div class="callout" style="margin-bottom:8px"><b>긴급 4건</b>&nbsp;— 그중 2건이 금강제화(이현재 담당)에 집중</div>
+            <table class="data-table" id="urgentTable"></table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footnote">popmes 수주 데이터(908건, "도무스 수주.xls") 분석 결과 · 견적금액 데이터가 거의 없어 매출액이 아닌 "건수" 기준 분석입니다 · 담당자 "시스템관리자"(3건)는 휴일 표시 등 시스템성 항목으로 집계에서 제외했습니다</div>
+  </div>
+</template>
+
+</div><!-- /templates -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+(function(){
+  'use strict';
+
+  /* =========================================================
+     Per-page CSS strings (page-local :root removed; body -> :host)
+     ========================================================= */
+
+  const scheduleCSS = `
+    :host{
+      display:block;
+      color-scheme: dark;
+      --bg:#12161b; --surface:#1b2129; --surface-2:#232b34; --surface-3:#2a333d;
+      --border:#2e3742; --text:#eaedf1; --text-muted:#8d97a4; --text-faint:#5c6672;
+      --accent:#5b9dff; --accent-soft:rgba(91,157,255,.14);
+      --status-done:#7c8794; --status-done-soft:rgba(124,135,148,.14);
+      --shadow: 0 8px 24px rgba(0,0,0,.28); --overlay: rgba(6,8,10,.6);
+      background:var(--bg); color:var(--text);
+      font-family:'IBM Plex Sans KR', 'Pretendard', 'Malgun Gothic', sans-serif;
+      -webkit-font-smoothing:antialiased;
+    }
+    *{box-sizing:border-box;}
+    .mono{ font-family:'IBM Plex Mono','IBM Plex Sans KR',monospace; font-variant-numeric:tabular-nums; }
+    button{ font-family:inherit; }
+
+    .board{ display:flex; flex-direction:column; gap:16px; padding:20px 24px 28px; min-height:100vh; }
+
+    .topbar{ display:flex; align-items:center; justify-content:space-between; gap:24px; flex-wrap:wrap; }
+    .brand{ display:flex; align-items:baseline; gap:12px; }
+    .brand .mark{ font-weight:700; font-size:15px; letter-spacing:.14em; color:var(--accent); text-transform:uppercase; }
+    .brand h1{ margin:0; font-size:22px; font-weight:700; letter-spacing:-.01em; }
+    .brand .sub{ font-size:12.5px; color:var(--text-faint); }
+    .topbar-right{ display:flex; align-items:center; gap:20px; }
+    .legend{ display:flex; gap:12px; flex-wrap:wrap; max-width:460px; }
+    .legend-item{ display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-muted); }
+    .legend-item.done-note{ padding-left:10px; border-left:1px solid var(--border); }
+    .dot{ width:9px; height:9px; border-radius:50%; flex:none; }
+    .dot.holiday{ background:#e5484d; }
+    .dot.done{ background:var(--status-done); }
+    .add-holiday-btn{
+      background:var(--surface-2); border:1px solid var(--border); color:var(--text);
+      height:30px; padding:0 12px; border-radius:8px; cursor:pointer; font-size:12.5px;
+      font-weight:600; margin-right:6px;
+    }
+    .add-holiday-btn:hover{ background:var(--surface-3); }
+    .clock{ text-align:right; padding-left:20px; border-left:1px solid var(--border); }
+    .clock .time{ font-size:22px; font-weight:600; line-height:1.1; }
+    .clock .date{ font-size:12.5px; color:var(--text-muted); }
+
+    .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); }
+    .cal-head{ display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid var(--border); }
+    .cal-title{ display:flex; align-items:baseline; gap:10px; }
+    .cal-title h2{ margin:0; font-size:18px; font-weight:700; }
+    .cal-title .count{ font-size:12.5px; color:var(--text-faint); }
+    .cal-nav{ display:flex; align-items:center; gap:6px; }
+    .nav-btn{
+      background:var(--surface-2); border:1px solid var(--border); color:var(--text);
+      width:30px; height:30px; border-radius:8px; cursor:pointer; font-size:14px;
+      display:flex; align-items:center; justify-content:center;
+    }
+    .nav-btn:hover{ background:var(--surface-3); }
+    .today-btn{
+      background:var(--surface-2); border:1px solid var(--border); color:var(--text);
+      height:30px; padding:0 12px; border-radius:8px; cursor:pointer; font-size:12.5px;
+      font-weight:600; margin-left:4px;
+    }
+    .today-btn:hover{ background:var(--surface-3); }
+
+    .weekdays{ display:grid; grid-template-columns:repeat(7,1fr); border-bottom:1px solid var(--border); }
+    .weekdays div{
+      padding:9px 0; text-align:center; font-size:12px; font-weight:600;
+      color:var(--text-faint); text-transform:uppercase; letter-spacing:.04em;
+    }
+    .weekdays div.sun{ color:#e5484d; }
+    .weekdays div.sat{ color:var(--accent); }
+
+    .cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); grid-auto-rows:132px; }
+    .day-cell{
+      height:100%; overflow:hidden; border-right:1px solid var(--border); border-bottom:1px solid var(--border);
+      padding:8px; display:flex; flex-direction:column; gap:5px; cursor:pointer; transition:background .12s ease;
+    }
+    .day-cell:hover{ background:var(--surface-2); }
+    .cal-grid .day-cell:nth-child(7n){ border-right:none; }
+    .day-cell.outside{ opacity:.35; }
+    .day-cell.outside:hover{ background:transparent; cursor:default; }
+    .day-num{
+      font-size:13px; font-weight:600; color:var(--text-muted);
+      width:22px; height:22px; display:flex; align-items:center; justify-content:center; border-radius:50%;
+    }
+    .day-cell.is-today .day-num{ background:var(--accent); color:#fff; }
+    .day-cell.sun .day-num, .day-cell.holiday .day-num{ color:#e5484d; }
+    .day-cell.sat .day-num{ color:var(--accent); }
+    .day-cell.is-today.sun .day-num, .day-cell.is-today.sat .day-num, .day-cell.is-today.holiday .day-num{ color:#fff; }
+    .holiday-label{ font-size:10.5px; font-weight:600; color:#e5484d; }
+
+    .day-events{ display:flex; flex-direction:column; gap:3px; overflow:hidden; min-height:0; }
+    .ev-chip{
+      font-size:11px; font-weight:500; padding:2px 6px; border-radius:5px; white-space:nowrap; overflow:hidden;
+      border-left:3px solid var(--border); background:var(--surface-2); color:var(--text);
+      display:flex; align-items:baseline; gap:5px;
+    }
+    .ev-chip .chip-tag{
+      font-family:'IBM Plex Mono','IBM Plex Sans KR',monospace;
+      font-weight:700; flex:none; font-size:10px; display:inline-flex; align-items:center; gap:4px;
+    }
+    .ev-chip .chip-name{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text); opacity:.9; }
+    .ev-chip.holiday{ border-left-color:#e5484d; color:#e5484d; background:rgba(229,72,77,.12); }
+    .ev-chip.is-done{ opacity:.55; text-decoration:line-through; }
+    .ev-more{ font-size:10.5px; color:var(--text-faint); padding-left:2px; }
+    .material-box{
+      font-size:9.5px; font-weight:700; padding:0 4px; border-radius:4px;
+      border:1px solid var(--border); color:var(--text-muted); background:var(--surface-3);
+    }
+    .pill.edit{ background:var(--surface-3); color:var(--text-muted); border:1px solid var(--border); margin-right:6px; }
+    .ev-edit-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:4px; }
+    .ev-edit-field{ display:flex; flex-direction:column; gap:4px; }
+    .ev-edit-field.full{ grid-column:1 / -1; }
+    .ev-edit-field label{ font-size:11px; font-weight:600; color:var(--text-faint); }
+    .ev-edit-field input, .ev-edit-field select{
+      padding:7px 9px; border-radius:8px; border:1px solid var(--border);
+      background:var(--surface); color:var(--text); font-size:12.5px; font-family:inherit;
+    }
+    .ev-edit-field input[type="date"]{ cursor:pointer; }
+    .ev-edit-field input[type="date"]::-webkit-calendar-picker-indicator{ filter:invert(1); cursor:pointer; }
+    .ev-btn.danger{ border-color:#e5484d; color:#e5484d; }
+    .ev-btn-row{ display:flex; justify-content:flex-end; gap:8px; margin-top:6px; }
+    .ev-btn{
+      padding:7px 14px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; font-family:inherit;
+      border:1px solid var(--border); background:var(--surface); color:var(--text);
+    }
+    .ev-btn.primary{ background:var(--accent); border-color:var(--accent); color:#fff; }
+
+    .footnote{ font-size:11.5px; color:var(--text-faint); text-align:center; padding-top:4px; }
+
+    .overlay{
+      position:fixed; inset:0; background:var(--overlay);
+      display:flex; align-items:center; justify-content:center; padding:20px; z-index:20;
+    }
+    .overlay[hidden]{ display:none; }
+    .modal{
+      background:var(--surface); border:1px solid var(--border); border-radius:16px;
+      width:100%; max-width:460px; max-height:min(600px,86vh);
+      display:flex; flex-direction:column; box-shadow:var(--shadow);
+    }
+    .modal-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 18px; border-bottom:1px solid var(--border); }
+    .modal-head h3{ margin:0; font-size:16px; font-weight:700; }
+    .modal-head .sub{ font-size:12px; color:var(--text-faint); margin-top:2px; }
+    .close-btn{
+      background:var(--surface-2); border:1px solid var(--border); color:var(--text-muted);
+      width:28px; height:28px; border-radius:8px; cursor:pointer; font-size:15px; line-height:1;
+    }
+    .close-btn:hover{ background:var(--surface-3); }
+    .modal-body{ padding:12px 18px 18px; overflow-y:auto; display:flex; flex-direction:column; gap:10px; }
+    .modal-empty{ font-size:13px; color:var(--text-faint); padding:20px 0; text-align:center; }
+
+    .ev-card{
+      background:var(--surface-2); border:1px solid var(--border); border-left:3px solid var(--border);
+      border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; gap:4px;
+    }
+    .ev-card.holiday{ border-left-color:#e5484d; }
+    .ev-card.is-done{ opacity:.6; }
+    .ev-card.is-done .client, .ev-card.is-done .item{ text-decoration:line-through; }
+    .ev-card .client{ font-size:13.5px; font-weight:600; display:flex; align-items:center; gap:6px; }
+    .ev-card .type-tag{ font-weight:700; margin-right:2px; }
+    .ev-card.holiday .type-tag{ color:#e5484d; }
+    .ev-card .item{ font-size:12px; color:var(--text-muted); }
+    .ev-card .row{ display:flex; align-items:center; justify-content:space-between; margin-top:2px; }
+    .ev-card .assign{ font-size:11.5px; color:var(--text-faint); }
+    .ev-card .del-btn{ background:none; border:none; color:var(--text-faint); font-size:11px; cursor:pointer; font-family:inherit; text-decoration:underline; }
+
+    .add-form{ display:flex; flex-direction:column; gap:12px; padding:16px 18px; }
+    .add-form .field{ display:flex; flex-direction:column; gap:5px; }
+    .add-form label{ font-size:12.5px; font-weight:600; color:var(--text-muted); }
+    .add-form input, .add-form select{
+      padding:9px 11px; border-radius:9px; border:1px solid var(--border);
+      background:var(--surface); color:var(--text); font-size:13.5px; font-family:inherit;
+    }
+    .add-form input[type="date"]{ cursor:pointer; }
+    .add-form input[type="date"]::-webkit-calendar-picker-indicator{ filter:invert(1); cursor:pointer; }
+    .add-form .chip-row{ display:flex; gap:8px; }
+    .add-form .chip{
+      flex:1; padding:8px 0; text-align:center; border-radius:9px; border:1px solid var(--border);
+      background:var(--surface); color:var(--text-muted); font-size:12.5px; font-weight:600; cursor:pointer;
+    }
+    .add-form .chip.active{ background:rgba(229,72,77,.12); border-color:#e5484d; color:#e5484d; }
+    .add-form .btn-row{ display:flex; justify-content:flex-end; gap:8px; margin-top:4px; }
+    .add-form .btn{
+      padding:9px 16px; border-radius:9px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit;
+      border:1px solid var(--border); background:var(--surface); color:var(--text);
+    }
+    .add-form .btn.primary{ background:var(--accent); border-color:var(--accent); color:#fff; }
+    .pill{ font-size:11px; font-weight:600; padding:2px 8px; border-radius:20px; white-space:nowrap; }
+    .pill.toggle{ border:none; cursor:pointer; font-family:inherit; }
+    .pill.toggle:hover{ filter:brightness(1.12); }
+    .pill.pending{ background:var(--accent-soft); color:var(--accent); }
+    .pill.done{ background:var(--status-done-soft); color:var(--status-done); }
+    .tag-solo{
+      font-size:10.5px; font-weight:600; padding:1px 6px; border-radius:5px;
+      background:var(--accent-soft); color:var(--accent); border:1px solid transparent;
+    }
+
+    @media (max-width: 720px){
+      .day-cell{ min-height:76px; }
+      .ev-chip{ font-size:10px; }
+    }
+  `;
+
+  const salesCSS = `
+    :host{ display:block; background:var(--bg); color:var(--text); font-family:'IBM Plex Sans KR','Pretendard','Malgun Gothic',sans-serif; }
+    *{ box-sizing:border-box; }
+    .mono{ font-family:'IBM Plex Mono','IBM Plex Sans KR',monospace; font-variant-numeric:tabular-nums; }
+
+    .page{ max-width:1180px; margin:0 auto; padding:24px 24px 48px; display:flex; flex-direction:column; gap:16px; }
+
+    .topbar{ display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+    .brand{ display:flex; align-items:baseline; gap:12px; }
+    .brand .mark{ font-weight:700; font-size:14px; letter-spacing:.14em; color:var(--accent); text-transform:uppercase; }
+    .brand h1{ margin:0; font-size:21px; font-weight:700; }
+
+    .role-switch{
+      display:flex; align-items:center; gap:8px; background:var(--surface); border:1px solid var(--border);
+      border-radius:20px; padding:4px; box-shadow:var(--shadow);
+    }
+    .role-btn{
+      border:none; background:transparent; padding:6px 14px; border-radius:16px; font-size:12.5px; font-weight:600;
+      color:var(--text-muted); cursor:pointer; font-family:inherit;
+    }
+    .role-btn.active{ background:var(--accent); color:#fff; }
+    .role-hint{ font-size:11.5px; color:var(--text-faint); }
+
+    .search-row{ display:flex; gap:10px; }
+    .search-box{ position:relative; flex:1; max-width:420px; }
+    .search-box input{
+      width:100%; padding:11px 14px 11px 38px; border-radius:12px; border:1px solid var(--border);
+      background:var(--surface); color:var(--text); font-size:14px; font-family:inherit;
+    }
+    .search-box input::placeholder{ color:var(--text-faint); }
+    .search-box svg{ position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-faint); }
+
+    .client-panel{
+      background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow);
+      padding:16px 18px; display:none; flex-direction:column; gap:12px;
+    }
+    .client-panel.show{ display:flex; }
+    .client-panel .head{ display:flex; align-items:center; justify-content:space-between; }
+    .client-panel .head .name{ font-size:16px; font-weight:700; }
+    .client-panel .head .brand-line{ font-size:12.5px; color:var(--text-faint); margin-top:2px; }
+    .client-panel .close{
+      background:var(--surface-2); border:1px solid var(--border); width:26px; height:26px; border-radius:8px;
+      cursor:pointer; color:var(--text-muted); font-size:13px;
+    }
+    .client-grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    @media (max-width:720px){ .client-grid{ grid-template-columns:1fr; } }
+    .client-block h3{ margin:0 0 8px; font-size:12px; font-weight:700; color:var(--text-faint); text-transform:uppercase; letter-spacing:.04em; }
+    .kv{ display:flex; justify-content:space-between; gap:12px; font-size:13px; padding:4px 0; border-bottom:1px dashed var(--border); }
+    .kv:last-child{ border-bottom:none; }
+    .kv .k{ color:var(--text-muted); }
+    .kv .v{ font-weight:600; text-align:right; }
+    .inprogress-row{ display:flex; justify-content:space-between; gap:10px; font-size:13px; padding:6px 0; border-bottom:1px dashed var(--border); }
+    .inprogress-row:last-child{ border-bottom:none; }
+    .more-link{ font-size:12.5px; color:var(--accent); background:none; border:none; cursor:pointer; font-family:inherit; padding:0; text-align:left; }
+
+    table{ width:100%; border-collapse:collapse; font-size:13.5px; }
+    .table-wrap{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow-x:auto; }
+    thead th{
+      text-align:left; padding:11px 14px; font-size:11.5px; font-weight:700; color:var(--text-faint);
+      text-transform:uppercase; letter-spacing:.03em; border-bottom:1px solid var(--border); white-space:nowrap;
+    }
+    tbody td{ padding:12px 14px; border-bottom:1px solid var(--border); vertical-align:middle; white-space:nowrap; }
+    tbody tr:last-child td{ border-bottom:none; }
+    tbody tr{ cursor:pointer; }
+    tbody tr:hover td{ background:var(--surface-2); }
+
+    .cell-client .name{ font-weight:600; }
+    .cell-client .brand{ font-size:11.5px; color:var(--text-faint); }
+
+    .urgent-tag{ font-size:10.5px; font-weight:700; color:var(--urgent); background:var(--urgent-soft); border-radius:5px; padding:1px 6px; margin-left:6px; }
+
+    .amount{ font-weight:600; }
+    .amount.masked{ color:var(--text-faint); letter-spacing:.06em; }
+
+    .lock-icon{ opacity:.6; }
+  `;
+
+  const orderFormCSS = `
+    :host{ display:block; background:var(--bg); color:var(--text); font-family:'IBM Plex Sans KR','Pretendard','Malgun Gothic',sans-serif; }
+    *{ box-sizing:border-box; }
+    .mono{ font-family:'IBM Plex Mono','IBM Plex Sans KR',monospace; font-variant-numeric:tabular-nums; }
+
+    .page{ max-width:720px; margin:0 auto; padding:24px 20px 80px; display:flex; flex-direction:column; gap:16px; }
+
+    .topbar{ display:flex; align-items:baseline; gap:12px; }
+    .topbar .mark{ font-weight:700; font-size:13px; letter-spacing:.14em; color:var(--accent); text-transform:uppercase; }
+    .topbar h1{ margin:0; font-size:20px; font-weight:700; }
+
+    .card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:18px 20px; display:flex; flex-direction:column; gap:14px; }
+    .card h2{ margin:0; font-size:13px; font-weight:700; color:var(--text-faint); text-transform:uppercase; letter-spacing:.04em; }
+
+    .field-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    @media (max-width:560px){ .field-grid{ grid-template-columns:1fr; } }
+    .field{ display:flex; flex-direction:column; gap:5px; }
+    .field.full{ grid-column:1 / -1; }
+    .field label{ font-size:12.5px; font-weight:600; color:var(--text-muted); }
+    .field label .req{ color:var(--danger); margin-left:2px; }
+    .field input, .field select, .field textarea{
+      padding:9px 11px; border-radius:9px; border:1px solid var(--border);
+      background:var(--surface); color:var(--text); font-size:13.5px; font-family:inherit;
+    }
+    .field textarea{ resize:vertical; min-height:64px; }
+    .field .hint{ font-size:11px; color:var(--text-faint); }
+
+    .chip-group{ display:flex; gap:8px; }
+    .chip{
+      flex:1; padding:9px 0; text-align:center; border-radius:9px; border:1px solid var(--border);
+      background:var(--surface); color:var(--text-muted); font-size:13px; font-weight:600; cursor:pointer;
+    }
+    .chip.active[data-v="일반"]{ background:var(--accent-soft); border-color:var(--accent); color:var(--accent); }
+    .chip.active[data-v="긴급"]{ background:var(--urgent-soft); border-color:var(--urgent); color:var(--urgent); }
+    .chip.active[data-v="금속"], .chip.active[data-v="목재"]{ background:var(--accent-soft); border-color:var(--accent); color:var(--accent); }
+
+    .amount-row{ display:flex; align-items:center; gap:10px; }
+    .amount-row input{ flex:1; }
+    .amount-note{ font-size:11.5px; color:var(--text-faint); display:flex; align-items:center; gap:5px; }
+
+    .toggle-row{ display:flex; align-items:center; justify-content:space-between; cursor:pointer; }
+    .toggle-row .caret{ font-size:12px; color:var(--text-faint); transition:transform .15s ease; }
+    .toggle-row.open .caret{ transform:rotate(180deg); }
+    .collapsible{ display:none; flex-direction:column; gap:12px; }
+    .collapsible.open{ display:flex; }
+
+    .task-list{ display:flex; flex-direction:column; gap:10px; }
+    .task-row{
+      border:1px solid var(--border); border-radius:12px; padding:12px; display:flex; flex-direction:column; gap:10px;
+      background:var(--surface-2);
+    }
+    .task-row .task-grid{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+    @media (max-width:560px){ .task-row .task-grid{ grid-template-columns:1fr 1fr; } }
+    .task-row .task-full{ grid-column:1 / -1; }
+    .remove-task{ align-self:flex-end; background:none; border:none; color:var(--danger); font-size:12px; cursor:pointer; font-family:inherit; }
+    .add-task{
+      align-self:flex-start; background:var(--accent-soft); color:var(--accent); border:1px dashed var(--accent);
+      border-radius:9px; padding:9px 14px; font-size:12.5px; font-weight:600; cursor:pointer; font-family:inherit;
+    }
+
+    .save-bar{ position:sticky; bottom:0; background:var(--bg); padding-top:8px; display:flex; justify-content:flex-end; gap:10px; }
+    .btn{ padding:11px 20px; border-radius:10px; font-size:13.5px; font-weight:600; cursor:pointer; font-family:inherit; border:1px solid var(--border); background:var(--surface); color:var(--text); }
+    .btn.primary{ background:var(--accent); border-color:var(--accent); color:#fff; }
+  `;
+
+  const tasksCSS = `
+    :host{ display:block; background:var(--bg); color:var(--text); font-family:'IBM Plex Sans KR','Pretendard','Malgun Gothic',sans-serif; }
+    *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    .mono{ font-family:'IBM Plex Mono','IBM Plex Sans KR',monospace; font-variant-numeric:tabular-nums; }
+
+    .app{ max-width:480px; margin:0 auto; min-height:100vh; display:flex; flex-direction:column; }
+
+    .top{ position:sticky; top:0; z-index:5; background:var(--bg); padding:16px 16px 8px; }
+    .top h1{ margin:0 0 2px; font-size:20px; font-weight:700; }
+    .top .sub{ font-size:13px; color:var(--text-muted); }
+
+    .daytabs{ display:flex; gap:8px; padding:12px 16px 4px; overflow-x:auto; }
+    .daytab{
+      flex:none; padding:8px 14px; border-radius:20px; border:1px solid var(--border);
+      background:var(--surface); color:var(--text-muted); font-size:13px; font-weight:600; cursor:pointer;
+    }
+    .daytab.active{ background:var(--accent); border-color:var(--accent); color:#fff; }
+
+    .summary{ display:flex; gap:10px; padding:8px 16px 4px; }
+    .stat{ flex:1; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:10px 12px; box-shadow:var(--shadow); }
+    .stat .num{ font-size:20px; font-weight:700; line-height:1.1; }
+    .stat .label{ font-size:11.5px; color:var(--text-faint); margin-top:2px; }
+
+    .search{ margin:10px 16px 4px; }
+    .search input{
+      width:100%; padding:11px 14px; border-radius:12px; border:1px solid var(--border);
+      background:var(--surface); color:var(--text); font-size:14px; font-family:inherit;
+    }
+    .search input::placeholder{ color:var(--text-faint); }
+
+    .list{ flex:1; padding:8px 16px 90px; display:flex; flex-direction:column; gap:10px; }
+    .empty{ text-align:center; color:var(--text-faint); font-size:13.5px; padding:40px 0; }
+
+    .task{
+      display:flex; align-items:center; gap:12px;
+      background:var(--surface); border:1px solid var(--border); border-radius:14px;
+      padding:14px; box-shadow:var(--shadow); cursor:pointer; user-select:none; transition:background .15s ease;
+    }
+    .task:active{ background:var(--surface-2); }
+    .task.done{ background:var(--done-bg); border-color:var(--done-bg); }
+
+    .task .time{ flex:none; width:56px; text-align:center; font-size:14px; font-weight:700; color:var(--accent); }
+    .task.done .time{ color:var(--done-text); }
+
+    .task .body{ flex:1; min-width:0; }
+    .task .client{ font-size:14.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .task .desc{ font-size:12.5px; color:var(--text-muted); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .task.done .client, .task.done .desc{ color:var(--done-text); text-decoration:line-through; }
+    .task .type-tag{ font-size:11px; font-weight:600; color:var(--accent); }
+    .task.done .type-tag{ color:var(--done-text); }
+
+    .check{
+      flex:none; width:30px; height:30px; border-radius:50%;
+      border:2px solid var(--border); background:var(--surface);
+      display:flex; align-items:center; justify-content:center; font-size:15px; color:transparent;
+    }
+    .task.done .check{ background:var(--accent); border-color:var(--accent); color:#fff; }
+
+    .bottom-note{
+      position:fixed; left:0; right:0; bottom:0; max-width:480px; margin:0 auto;
+      background:var(--surface); border-top:1px solid var(--border);
+      padding:10px 16px calc(10px + env(safe-area-inset-bottom));
+      font-size:11.5px; color:var(--text-faint); text-align:center;
+    }
+  `;
+
+  const revenueCSS = `
+    :host{ display:block; background:var(--bg); color:var(--text); font-family:'IBM Plex Sans KR','Pretendard','Malgun Gothic',sans-serif; }
+    *{ box-sizing:border-box; }
+    .mono{ font-family:'IBM Plex Mono','IBM Plex Sans KR',monospace; font-variant-numeric:tabular-nums; }
+
+    .page{ max-width:1040px; margin:0 auto; padding:24px 24px 60px; display:flex; flex-direction:column; gap:18px; }
+
+    .topbar{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+    .brand{ display:flex; align-items:baseline; gap:12px; }
+    .brand .mark{ font-weight:700; font-size:13px; letter-spacing:.14em; color:var(--accent); text-transform:uppercase; }
+    .brand h1{ margin:0; font-size:20px; font-weight:700; }
+    .brand .sub{ font-size:12.5px; color:var(--text-faint); }
+
+    .role-switch{ display:flex; gap:6px; background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:3px; }
+    .role-btn{ padding:6px 14px; border-radius:8px; border:none; background:transparent; color:var(--text-muted); font-size:12.5px; font-weight:600; cursor:pointer; font-family:inherit; }
+    .role-btn.active{ background:var(--surface); color:var(--accent); box-shadow:var(--shadow); }
+
+    .upload-btn{
+      display:inline-flex; align-items:center; gap:6px;
+      padding:7px 13px; border-radius:8px; border:1px solid var(--border); background:var(--surface-2);
+      color:var(--text); font-size:12.5px; font-weight:600; cursor:pointer; font-family:inherit;
+    }
+    .upload-btn:hover{ background:var(--surface-3); }
+    .upload-status{ font-size:11.5px; color:var(--text-faint); }
+
+    .stat-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+    @media (max-width:720px){ .stat-row{ grid-template-columns:repeat(2,1fr); } }
+    .stat{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 18px; box-shadow:var(--shadow); }
+    .stat .label{ font-size:12px; color:var(--text-faint); }
+    .stat .num{ font-size:22px; font-weight:700; margin-top:4px; }
+    .stat .num.warn{ color:var(--warn); }
+    .stat .num.ok{ color:var(--ok); }
+
+    .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); }
+    .panel-head{ display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:10px; }
+    .panel-head h2{ margin:0; font-size:15px; font-weight:700; }
+
+    .tabs{ display:flex; gap:6px; }
+    .tab{ padding:7px 13px; border-radius:8px; border:1px solid var(--border); background:var(--surface-2); color:var(--text-muted); font-size:12.5px; font-weight:600; cursor:pointer; font-family:inherit; }
+    .tab.active{ background:var(--accent-soft); border-color:var(--accent); color:var(--accent); }
+
+    .brand-filter{ padding:7px 11px; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--text); font-size:12.5px; font-family:inherit; }
+
+    table{ width:100%; border-collapse:collapse; font-size:13px; }
+    thead th{ text-align:left; padding:10px 18px; font-size:11.5px; font-weight:700; color:var(--text-faint); text-transform:uppercase; letter-spacing:.03em; border-bottom:1px solid var(--border); }
+    tbody td{ padding:11px 18px; border-bottom:1px solid var(--border); vertical-align:middle; }
+    tbody tr:last-child td{ border-bottom:none; }
+    tbody tr:hover{ background:var(--surface-2); }
+    td.amount{ font-family:'IBM Plex Mono','IBM Plex Sans KR',monospace; font-weight:600; text-align:right; }
+    td.center{ text-align:center; }
+
+    .badge{ display:inline-flex; align-items:center; font-size:11px; font-weight:600; padding:3px 9px; border-radius:20px; }
+    .badge.ok{ background:var(--ok-soft); color:var(--ok); }
+    .badge.warn{ background:var(--warn-soft); color:var(--warn); }
+    .badge.danger{ background:var(--danger-soft); color:var(--danger); }
+
+    .check-pill{
+      border:1px solid var(--border); background:var(--surface); color:var(--text-muted);
+      font-size:11.5px; font-weight:600; padding:4px 10px; border-radius:20px; cursor:pointer; font-family:inherit;
+    }
+    .check-pill.on{ background:var(--ok-soft); border-color:var(--ok); color:var(--ok); }
+    .check-pill.pay.on{ background:var(--accent-soft); border-color:var(--accent); color:var(--accent); }
+
+    .foot{ padding:10px 18px; font-size:11.5px; color:var(--text-faint); border-top:1px solid var(--border); }
+    .footnote{ font-size:11.5px; color:var(--text-faint); text-align:center; }
+
+    tr.group-head td{ background:var(--surface-2); font-weight:700; font-size:12.5px; color:var(--text-muted); padding:9px 18px; }
+    tr.group-head td.amount{ color:var(--text); }
+
+    tr.grand-total td{
+      background:var(--surface-2); font-weight:700; font-size:13px; color:var(--text);
+      padding:12px 18px; border-top:2px solid var(--border); border-bottom:none;
+    }
+    tr.grand-total td.amount{ color:var(--accent); font-size:14px; }
+
+    .analysis-grid{ display:grid; grid-template-columns:1.3fr 1fr; gap:22px; padding:18px; }
+    @media (max-width:720px){ .analysis-grid{ grid-template-columns:1fr; } }
+    .chart-title{ font-size:12.5px; font-weight:700; color:var(--text-muted); margin-bottom:8px; }
+    .chart-sub{ font-size:11px; color:var(--text-faint); margin-top:6px; }
+    .axis-line{ stroke:var(--border); stroke-width:1; }
+    .grid-line{ stroke:var(--border); stroke-width:1; opacity:.6; }
+    .trend-line{ fill:none; stroke:var(--accent); stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+    .trend-dot{ fill:var(--accent); }
+    .trend-label{ font-size:10.5px; font-weight:600; fill:var(--text); font-family:'IBM Plex Mono','IBM Plex Sans KR',monospace; }
+    .axis-label{ font-size:10px; fill:var(--text-faint); }
+
+    .mini-table{ width:100%; border-collapse:collapse; font-size:12.5px; }
+    .mini-table td{ padding:6px 0; border-bottom:1px solid var(--border); vertical-align:middle; }
+    .mini-table tr:last-child td{ border-bottom:none; }
+    .mini-table td.mt-name{ width:78px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--text); font-weight:600; }
+    .mini-table td.mt-bar{ width:auto; }
+    .mini-table td.mt-pct{ width:44px; text-align:right; color:var(--text-muted); font-family:'IBM Plex Mono','IBM Plex Sans KR',monospace; font-size:11.5px; }
+    .bar-track{ height:8px; background:var(--surface-2); border-radius:4px; overflow:hidden; }
+    .bar-fill{ height:100%; background:var(--accent); border-radius:4px; }
+
+    .mini-stats-row{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; padding:0 18px 18px; }
+    @media (max-width:720px){ .mini-stats-row{ grid-template-columns:1fr; } }
+    .mini-stat{ background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:12px 14px; }
+    .mini-stat .mini-label{ font-size:11.5px; color:var(--text-faint); }
+    .mini-stat .mini-num{ font-size:16px; font-weight:700; margin-top:3px; font-family:'IBM Plex Mono','IBM Plex Sans KR',monospace; }
+
+    .analysis-locked{ padding:28px; text-align:center; color:var(--text-faint); font-size:13px; }
+
+    .target-controls{ display:flex; gap:8px; align-items:center; margin-bottom:14px; flex-wrap:wrap; }
+    .target-controls input{
+      padding:7px 11px; border-radius:8px; border:1px solid var(--border); background:var(--surface);
+      color:var(--text); font-size:12.5px; font-family:inherit;
+    }
+    .target-controls input#targetKeyInput{ width:110px; }
+    .target-controls input#targetAmountInput{ width:150px; }
+    .add-target-btn{
+      padding:7px 13px; border-radius:8px; border:1px solid var(--accent); background:var(--accent-soft);
+      color:var(--accent); font-size:12.5px; font-weight:600; cursor:pointer; font-family:inherit;
+    }
+    table.target-table{ width:100%; border-collapse:collapse; font-size:13px; }
+    table.target-table th{ text-align:left; padding:8px 4px; font-size:11px; font-weight:700; color:var(--text-faint); text-transform:uppercase; letter-spacing:.03em; border-bottom:1px solid var(--border); }
+    table.target-table td{ padding:9px 4px; border-bottom:1px solid var(--border); vertical-align:middle; }
+    table.target-table tr:last-child td{ border-bottom:none; }
+    .target-progress-wrap{ display:flex; align-items:center; gap:8px; min-width:140px; }
+    .target-progress-wrap .bar-track{ flex:1; height:8px; }
+    .target-pct{ font-family:'IBM Plex Mono','IBM Plex Sans KR',monospace; font-size:11.5px; font-weight:600; width:40px; text-align:right; }
+    .bar-fill.ok{ background:var(--ok); }
+    .bar-fill.warn{ background:var(--warn); }
+    .bar-fill.danger{ background:var(--danger); }
+    .target-del{
+      border:1px solid var(--border); background:var(--surface); color:var(--text-faint);
+      font-size:12px; width:24px; height:24px; border-radius:6px; cursor:pointer; line-height:1;
+    }
+    .target-del:hover{ border-color:var(--danger); color:var(--danger); }
+    .filter-select{ padding:7px 11px; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--text); font-size:12.5px; font-family:inherit; }
+  `;
+
+  const analyticsCSS = `
+    :host{ display:block; background:var(--bg); color:var(--text); font-family:'IBM Plex Sans KR','Pretendard','Malgun Gothic',sans-serif; }
+    *{ box-sizing:border-box; }
+    .mono{ font-family:'IBM Plex Mono','IBM Plex Sans KR',monospace; font-variant-numeric:tabular-nums; }
+
+    .page{ max-width:1180px; margin:0 auto; padding:24px 24px 60px; display:flex; flex-direction:column; gap:18px; }
+
+    .topbar{ display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+    .brand{ display:flex; flex-direction:column; gap:4px; }
+    .brand .row{ display:flex; align-items:baseline; gap:12px; }
+    .brand .mark{ font-weight:700; font-size:13px; letter-spacing:.14em; color:var(--accent); text-transform:uppercase; }
+    .brand h1{ margin:0; font-size:21px; font-weight:700; }
+    .brand .sub{ font-size:12.5px; color:var(--text-faint); }
+    .owner-badge{
+      display:inline-flex; align-items:center; gap:5px; font-size:11.5px; font-weight:600;
+      padding:5px 11px; border-radius:20px; background:var(--warning-soft); color:#8a6d1f;
+      border:1px solid rgba(250,178,25,.35); white-space:nowrap;
+    }
+    @media (prefers-color-scheme: dark){ :host-context([data-theme]:not([data-theme="light"])) .owner-badge{ color:var(--warning); } :host(.dark-fallback) .owner-badge{ color:var(--warning); } }
+
+    .kpi-row{ display:grid; grid-template-columns:repeat(6,1fr); gap:12px; }
+    @media (max-width:980px){ .kpi-row{ grid-template-columns:repeat(3,1fr); } }
+    @media (max-width:560px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
+    .kpi{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px 16px; box-shadow:var(--shadow); }
+    .kpi .label{ font-size:11.5px; color:var(--text-faint); }
+    .kpi .value{ font-size:20px; font-weight:700; margin-top:4px; }
+    .kpi .value.up{ color:var(--good); }
+    .kpi .note{ font-size:10.5px; color:var(--text-faint); margin-top:2px; }
+
+    .grid-2{ display:grid; grid-template-columns:1.4fr 1fr; gap:16px; }
+    @media (max-width:900px){ .grid-2{ grid-template-columns:1fr; } }
+
+    .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); display:flex; flex-direction:column; }
+    .panel-head{ padding:14px 18px; border-bottom:1px solid var(--border); }
+    .panel-head h2{ margin:0; font-size:14.5px; font-weight:700; }
+    .panel-head .desc{ font-size:11.5px; color:var(--text-faint); margin-top:3px; }
+    .panel-body{ padding:16px 18px; }
+    .panel-foot{ padding:10px 18px 14px; font-size:11.5px; color:var(--text-muted); border-top:1px solid var(--border); background:var(--surface-2); border-radius:0 0 14px 14px; }
+
+    svg{ display:block; width:100%; height:auto; overflow:visible; }
+    .axis-label{ font-size:9.5px; fill:var(--text-faint); font-family:'IBM Plex Sans KR',sans-serif; }
+    .grid-line{ stroke:var(--border); stroke-width:1; }
+    .bar{ fill:var(--accent); }
+    .bar-track{ fill:var(--surface-3); }
+    .bar-label{ font-size:10px; fill:var(--text-muted); font-family:'IBM Plex Mono',monospace; }
+    .bar-name{ font-size:10.5px; fill:var(--text); font-family:'IBM Plex Sans KR',sans-serif; }
+    .line-path{ fill:none; stroke:var(--accent); stroke-width:2; stroke-linejoin:round; stroke-linecap:round; }
+    .area-path{ fill:var(--accent); opacity:.08; }
+    .dot{ fill:var(--accent); stroke:var(--surface); stroke-width:2; }
+    .dot-peak{ fill:var(--warning); stroke:var(--surface); stroke-width:2; }
+    .tooltip-rect{ fill:var(--text); opacity:0; }
+
+    table.data-table{ width:100%; border-collapse:collapse; font-size:12.5px; }
+    table.data-table th{ text-align:left; padding:7px 8px; font-size:10.5px; font-weight:700; color:var(--text-faint); text-transform:uppercase; letter-spacing:.03em; border-bottom:1px solid var(--border); }
+    table.data-table td{ padding:7px 8px; border-bottom:1px solid var(--border); }
+    table.data-table tr:last-child td{ border-bottom:none; }
+    table.data-table td.num{ font-family:'IBM Plex Mono',monospace; text-align:right; }
+    table.data-table td.muted{ color:var(--text-faint); }
+
+    .badge-rush{ display:inline-flex; font-size:10.5px; font-weight:600; padding:2px 7px; border-radius:20px; }
+    .badge-rush.high{ background:var(--critical-soft); color:var(--critical); }
+    .badge-rush.mid{ background:var(--warning-soft); color:#8a6d1f; }
+    .badge-rush.low{ background:var(--surface-3); color:var(--text-faint); }
+
+    .callout{ display:flex; gap:10px; padding:11px 14px; border-radius:10px; background:var(--surface-2); border:1px solid var(--border); font-size:12px; color:var(--text-muted); }
+    .callout b{ color:var(--text); }
+
+    .stack{ display:flex; flex-direction:column; gap:16px; }
+
+    .footnote{ font-size:11.5px; color:var(--text-faint); text-align:center; }
+  `;
+
+  /* =========================================================
+     Generic mount helper
+     ========================================================= */
+  function mountPage(hostEl, templateId, css, initFn){
+    const shadow = hostEl.attachShadow({ mode:'open' });
+    const style = document.createElement('style');
+    style.textContent = css;
+    shadow.appendChild(style);
+    const tpl = document.getElementById(templateId);
+    shadow.appendChild(tpl.content.cloneNode(true));
+    initFn(shadow);
+  }
+
+  /* =========================================================
+     Schedule board init
+     ========================================================= */
+  function initSchedulePage(root){
+    function pad(n){ return String(n).padStart(2,'0'); }
+    function tickClock(){
+      const now = new Date();
+      const days = ['일','월','화','수','목','금','토'];
+      root.getElementById('clockTime').textContent =
+        `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+      root.getElementById('clockDate').textContent =
+        `${now.getFullYear()}.${pad(now.getMonth()+1)}.${pad(now.getDate())} (${days[now.getDay()]})`;
+    }
+    tickClock();
+    setInterval(tickClock, 1000);
+
+    const WEEKDAYS = ['일','월','화','수','목','금','토'];
+    function ymd(d){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+    function addDays(base, n){ const d = new Date(base); d.setDate(d.getDate()+n); return d; }
+
+    const today = new Date();
+    today.setHours(0,0,0,0);
+
+    const REP_COLORS = {
+      '이현재': '#5b9dff',
+      '박성중': '#3ac8c8',
+      '이재황': '#e0b256',
+      '김선우': '#f35e52',
+    };
+    const REP_NAMES = Object.keys(REP_COLORS);
+    function repColor(op){ return REP_COLORS[op] || REP_COLORS[REP_NAMES[0]]; }
+
+    const QTY_OPTIONS = [5,10,20,30,40,50,60,70,80,90,100,150,200,300];
+    function formatQty(qty){ return String(qty); }
+
+    const rawEvents = [
+      { offset:-4, time:'09:00', client:'PB 파리바게트 이수점', task:'제과 쇼케이스', material:'금속', category:[], qty:8, op:'김선우', solo:false, done:true },
+      { offset:-3, time:'11:00', client:'K2 브레드가든 목동점', task:'진열대 리뉴얼', material:'목재', category:[], qty:20, op:'이재황', solo:false, done:true },
+      { offset:-1, time:'14:00', client:'BK 하늘제과 판교점', task:'진열 선반', material:'목재', category:[], qty:'단납', op:'박성중', solo:true, done:false },
+      { offset:0, time:'10:00', client:'ND 미도인베이커리 본점', task:'비말차단 진열대', material:'금속', category:[], qty:5, op:'이현재', solo:true, done:false },
+      { offset:0, time:'11:00', client:'CG 카페드마르쉐 잠실점', task:'도어틀, 몰딩', material:'목재', category:['디자인에너지'], qty:60, op:'박성중', solo:false, done:false },
+      { offset:0, time:'16:00', client:'CG 카페드마르쉐 잠실점', task:'냉장 쇼케이스', material:'금속', category:[], qty:20, op:'김선우', solo:false, done:false },
+      { offset:2, time:'09:30', client:'KK 라뜰리에드빵 강남점', task:'우드프레임', material:'목재', category:['공간디자인'], qty:10, op:'이재황', solo:false, done:false },
+      { offset:4, time:'13:00', client:'K2 브레드팜 송파점', task:'진열대 3type', material:'목재', category:[], qty:20, op:'김선우', solo:false, done:false },
+      { offset:6, time:'11:00', client:'K2 브레드팜 강남점', task:'진열대 3type', material:'목재', category:[], qty:200, op:'이현재', solo:false, done:false },
+      { offset:9, time:'10:00', client:'PB 파리바게트 대전역점', task:'대형 쇼케이스 세트', material:'금속', category:[], qty:100, op:'박성중', solo:false, done:false },
+      { offset:13, time:'14:00', client:'BK 하늘제과 분당점', task:'진열 선반', material:'목재', category:[], qty:'단납', op:'박성중', solo:true, done:false },
+      { offset:18, time:'10:00', client:'CG 카페드마르쉐 수원점', task:'냉장 쇼케이스', material:'금속', category:[], qty:300, op:'김선우', solo:false, done:false },
+    ];
+
+    const events = {};
+    rawEvents.forEach((e, idx) => {
+      const due = addDays(today, e.offset);
+      const key = ymd(due);
+      if (!events[key]) events[key] = [];
+      events[key].push({ id:'ev'+idx, client:e.client, task:e.task, material:e.material, category:e.category, qty:e.qty, time:e.time, op:e.op, solo:e.solo, done:e.done, due });
+    });
+    Object.values(events).forEach(list => list.sort((a,b) => a.time.localeCompare(b.time)));
+
+    function removeEventFromEvents(ev){
+      const key = ymd(ev.due);
+      if (events[key]) events[key] = events[key].filter(x => x.id !== ev.id);
+    }
+
+    function statusText(ev){ return ev.done ? '완료' : '예정'; }
+
+    let customEvents = [
+      { id:'h1', date:'2026-09-24', label:'추석연휴', isHoliday:true },
+      { id:'h2', date:'2026-09-25', label:'추석연휴', isHoliday:true },
+      { id:'h3', date:'2026-09-26', label:'추석연휴', isHoliday:true },
+      { id:'h4', date:'2026-10-03', label:'개천절', isHoliday:true },
+      { id:'h5', date:'2026-10-09', label:'한글날', isHoliday:true },
+    ];
+    function customEventsByDate(key){ return customEvents.filter(c => c.date === key); }
+
+    (function renderRepLegend(){
+      const legend = root.getElementById('repLegend');
+      const items = Object.keys(REP_COLORS).map(name =>
+        `<span class="legend-item"><span class="dot" style="background:${REP_COLORS[name]}"></span>${name}</span>`
+      ).join('');
+      legend.insertAdjacentHTML('afterbegin', items);
+    })();
+
+    let viewYear = today.getFullYear();
+    let viewMonth = today.getMonth();
+
+    function renderCalendar(){
+      root.getElementById('calTitle').textContent = `${viewYear}년 ${viewMonth+1}월`;
+
+      const firstOfMonth = new Date(viewYear, viewMonth, 1);
+      const startWeekday = firstOfMonth.getDay();
+      const gridStart = addDays(firstOfMonth, -startWeekday);
+
+      const grid = root.getElementById('calGrid');
+      grid.innerHTML = '';
+
+      let monthEventCount = 0;
+      for (let i = 0; i < 42; i++) {
+        const cellDate = addDays(gridStart, i);
+        const key = ymd(cellDate);
+        const isOutside = cellDate.getMonth() !== viewMonth;
+        const isToday = ymd(cellDate) === ymd(today);
+        const wd = cellDate.getDay();
+
+        const dayCustom = customEventsByDate(key);
+        const holidayEntry = dayCustom.find(c => c.isHoliday);
+        const noteEntries = dayCustom.filter(c => !c.isHoliday);
+
+        const cell = document.createElement('div');
+        cell.className = 'day-cell' + (isOutside ? ' outside' : '') + (isToday ? ' is-today' : '') +
+          (wd === 0 ? ' sun' : wd === 6 ? ' sat' : '') + (holidayEntry ? ' holiday' : '');
+
+        const dayEvents = events[key] || [];
+        if (!isOutside) monthEventCount += dayEvents.length;
+
+        const numEl = document.createElement('div');
+        numEl.className = 'day-num';
+        numEl.textContent = cellDate.getDate();
+        cell.appendChild(numEl);
+
+        if (holidayEntry) {
+          const hEl = document.createElement('div');
+          hEl.className = 'holiday-label';
+          hEl.textContent = holidayEntry.label;
+          cell.appendChild(hEl);
+        }
+
+        if (dayEvents.length || noteEntries.length) {
+          const evWrap = document.createElement('div');
+          evWrap.className = 'day-events';
+          noteEntries.forEach(note => {
+            const chip = document.createElement('div');
+            chip.className = 'ev-chip holiday';
+            chip.innerHTML = `<span class="chip-name">📌 ${note.label}</span>`;
+            evWrap.appendChild(chip);
+          });
+          const visible = dayEvents.slice(0, 3);
+          visible.forEach(ev => {
+            const chip = document.createElement('div');
+            chip.className = `ev-chip${ev.done ? ' is-done' : ''}`;
+            chip.style.borderLeftColor = repColor(ev.op);
+            chip.innerHTML = `<span class="chip-tag"><b style="color:${repColor(ev.op)}">${ev.op}</b><span class="material-box">${ev.material}</span></span><span class="chip-name">${ev.time} ${ev.client} · ${ev.task} · ${formatQty(ev.qty)}</span>`;
+            evWrap.appendChild(chip);
+          });
+          if (dayEvents.length > visible.length) {
+            const more = document.createElement('div');
+            more.className = 'ev-more';
+            more.textContent = `+${dayEvents.length - visible.length}건 더`;
+            evWrap.appendChild(more);
+          }
+          cell.appendChild(evWrap);
+        }
+
+        if (!isOutside) {
+          cell.addEventListener('click', () => openDay(cellDate, dayEvents, dayCustom));
+        }
+
+        grid.appendChild(cell);
+      }
+
+      root.getElementById('calCount').textContent = `이번 달 ${monthEventCount}건`;
+    }
+
+    const overlay = root.getElementById('overlay');
+    const modalBody = root.getElementById('modalBody');
+    let editingEventId = null;
+
+    function openDay(date, dayEvents, dayCustom){
+      dayCustom = dayCustom || [];
+      const holidayEntry = dayCustom.find(c => c.isHoliday);
+      root.getElementById('modalTitle').textContent =
+        `${date.getMonth()+1}월 ${date.getDate()}일 (${WEEKDAYS[date.getDay()]})` + (holidayEntry ? ` · 🔴 ${holidayEntry.label}` : '');
+      root.getElementById('modalSub').textContent = `작업 일정 ${dayEvents.length}건` + (dayCustom.length ? ` · 휴일/기타 ${dayCustom.length}건` : '');
+
+      modalBody.innerHTML = '';
+      if (!dayEvents.length && !dayCustom.length) {
+        modalBody.innerHTML = '<div class="modal-empty">이 날짜에 등록된 일정이 없습니다.</div>';
+      } else {
+        dayCustom.forEach(c => {
+          const card = document.createElement('div');
+          card.className = 'ev-card holiday';
+          card.innerHTML = `
+            <div class="row">
+              <span class="client"><span class="type-tag">${c.isHoliday ? '[휴일]' : '[기타]'}</span>${c.label}</span>
+              <button type="button" class="del-btn">삭제</button>
+            </div>
+          `;
+          card.querySelector('.del-btn').addEventListener('click', () => {
+            customEvents = customEvents.filter(x => x.id !== c.id);
+            renderCalendar();
+            openDay(date, dayEvents, customEventsByDate(ymd(date)));
+          });
+          modalBody.appendChild(card);
+        });
+        dayEvents.forEach(ev => {
+          const color = repColor(ev.op);
+          const card = document.createElement('div');
+          card.className = `ev-card${ev.done ? ' is-done' : ''}`;
+          card.style.borderLeftColor = color;
+
+          if (editingEventId === ev.id) {
+            card.innerHTML = `
+              <div class="row">
+                <span class="client"><b style="color:${color}">${ev.op}</b><span class="material-box">${ev.material}</span>${ev.client}</span>
+              </div>
+              <div class="ev-edit-grid">
+                <div class="ev-edit-field"><label>날짜</label><input type="date" class="e-date" value="${ymd(ev.due)}"></div>
+                <div class="ev-edit-field"><label>시각</label><input type="time" class="e-time" value="${ev.time}"></div>
+                <div class="ev-edit-field full"><label>작업내용</label><input type="text" class="e-task" value="${ev.task || ''}" placeholder="납품 품목"></div>
+                <div class="ev-edit-field"><label>재질</label>
+                  <select class="e-material">
+                    <option value="금속"${ev.material==='금속'?' selected':''}>금속</option>
+                    <option value="목재"${ev.material==='목재'?' selected':''}>목재</option>
+                  </select>
+                </div>
+                <div class="ev-edit-field"><label>작업량</label>
+                  <select class="e-qty">
+                    ${QTY_OPTIONS.map(q => `<option value="${q}"${String(ev.qty)===String(q)?' selected':''}>${q}</option>`).join('')}
+                    <option value="단납"${ev.qty==='단납'?' selected':''}>단납</option>
+                  </select>
+                </div>
+                <div class="ev-edit-field"><label>담당자</label>
+                  <select class="e-op">
+                    ${REP_NAMES.map(n => `<option value="${n}"${ev.op===n?' selected':''}>${n}</option>`).join('')}
+                  </select>
+                </div>
+              </div>
+              <div class="ev-btn-row">
+                <button type="button" class="ev-btn danger e-delete">일정 삭제</button>
+                <button type="button" class="ev-btn e-cancel">취소</button>
+                <button type="button" class="ev-btn primary e-save">저장</button>
+              </div>
+            `;
+            card.querySelector('.e-cancel').addEventListener('click', () => {
+              editingEventId = null;
+              openDay(date, dayEvents, dayCustom);
+            });
+            card.querySelector('.e-delete').addEventListener('click', () => {
+              if (!confirm('이 일정을 삭제할까요?')) return;
+              removeEventFromEvents(ev);
+              editingEventId = null;
+              renderCalendar();
+              openDay(date, events[ymd(date)] || [], customEventsByDate(ymd(date)));
+            });
+            card.querySelector('.e-save').addEventListener('click', () => {
+              const newDateStr = card.querySelector('.e-date').value;
+              ev.time = card.querySelector('.e-time').value || ev.time;
+              ev.task = card.querySelector('.e-task').value.trim();
+              ev.material = card.querySelector('.e-material').value;
+              const qtyRaw = card.querySelector('.e-qty').value;
+              ev.qty = qtyRaw === '단납' ? '단납' : Number(qtyRaw);
+              ev.op = card.querySelector('.e-op').value;
+              if (newDateStr && newDateStr !== ymd(ev.due)) {
+                removeEventFromEvents(ev);
+                const [y,m,d] = newDateStr.split('-').map(Number);
+                ev.due = new Date(y, m-1, d);
+                const newKey = ymd(ev.due);
+                if (!events[newKey]) events[newKey] = [];
+                events[newKey].push(ev);
+                events[newKey].sort((a,b) => a.time.localeCompare(b.time));
+              }
+              editingEventId = null;
+              renderCalendar();
+              openDay(date, events[ymd(date)] || [], dayCustom);
+            });
+          } else {
+            card.innerHTML = `
+              <div class="row">
+                <span class="client"><b style="color:${color}">${ev.op}</b><span class="material-box">${ev.material}</span>${ev.client}</span>
+                <span class="due mono">${ev.time}</span>
+              </div>
+              <div class="item">${ev.task ? ev.task + ' · ' : ''}작업량 ${formatQty(ev.qty)}${ev.solo ? ' · <span class="tag-solo">단독발주</span>' : ''}</div>
+              <div class="row">
+                <span class="assign">${ev.category.length ? ev.category.join(' · ') + ' · ' : ''}담당 ${ev.op}</span>
+                <span>
+                  <button type="button" class="pill edit">수정</button>
+                  <button type="button" class="pill toggle ${ev.done ? 'done' : 'pending'}">${statusText(ev)}</button>
+                </span>
+              </div>
+            `;
+            card.querySelector('.edit').addEventListener('click', () => {
+              editingEventId = ev.id;
+              openDay(date, dayEvents, dayCustom);
+            });
+            card.querySelector('.toggle').addEventListener('click', () => {
+              ev.done = !ev.done;
+              openDay(date, dayEvents, dayCustom);
+              renderCalendar();
+            });
+          }
+          modalBody.appendChild(card);
+        });
+      }
+      overlay.hidden = false;
+    }
+    function closeModal(){ overlay.hidden = true; editingEventId = null; }
+    root.getElementById('closeBtn').addEventListener('click', closeModal);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+    const addOverlay = root.getElementById('addOverlay');
+    let addType = 'holiday';
+    root.getElementById('addHolidayBtn').addEventListener('click', () => {
+      root.getElementById('addDate').value = ymd(today);
+      root.getElementById('addLabel').value = '';
+      addType = 'holiday';
+      [...root.getElementById('addTypeChips').children].forEach(c => c.classList.toggle('active', c.dataset.v === 'holiday'));
+      addOverlay.hidden = false;
+    });
+    root.getElementById('addTypeChips').addEventListener('click', (e) => {
+      const chip = e.target.closest('.chip');
+      if (!chip) return;
+      [...chip.parentElement.children].forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      addType = chip.dataset.v;
+    });
+    function closeAddModal(){ addOverlay.hidden = true; }
+    root.getElementById('addCloseBtn').addEventListener('click', closeAddModal);
+    root.getElementById('addCancelBtn').addEventListener('click', closeAddModal);
+    addOverlay.addEventListener('click', (e) => { if (e.target === addOverlay) closeAddModal(); });
+    root.getElementById('addSaveBtn').addEventListener('click', () => {
+      const date = root.getElementById('addDate').value;
+      const label = root.getElementById('addLabel').value.trim();
+      if (!date || !label) { alert('날짜와 내용을 모두 입력해주세요.'); return; }
+      customEvents.push({ id:'c' + Date.now(), date, label, isHoliday: addType === 'holiday' });
+      closeAddModal();
+      renderCalendar();
+    });
+
+    root.getElementById('prevBtn').addEventListener('click', () => {
+      viewMonth--; if (viewMonth < 0){ viewMonth = 11; viewYear--; }
+      renderCalendar();
+    });
+    root.getElementById('nextBtn').addEventListener('click', () => {
+      viewMonth++; if (viewMonth > 11){ viewMonth = 0; viewYear++; }
+      renderCalendar();
+    });
+    root.getElementById('todayBtn').addEventListener('click', () => {
+      viewYear = today.getFullYear(); viewMonth = today.getMonth();
+      renderCalendar();
+    });
+
+    renderCalendar();
+  }
+
+  /* =========================================================
+     Sales page init
+     ========================================================= */
+  function initSalesPage(root, appRole){
+    const orders = [
+      { brand:'파리바게뜨', client:'파리바게뜨', store:'송도랜드마크시티점', rep:'이재황', orderDate:'08/15', urgent:false, next:'—', amount:8200000 },
+      { brand:'파리바게뜨', client:'파리바게뜨', store:'수원아너스빌위즈점', rep:'이재황', orderDate:'08/18', urgent:false, next:'09/08 설치', amount:6400000 },
+      { brand:'파리바게뜨위탁가맹', client:'파리크라상', store:'강동강일점', rep:'이재황', orderDate:'08/19', urgent:false, next:'09/10 설치', amount:5100000 },
+      { brand:'금강제화', client:'큐앤플랜', store:'거제점', rep:'이현재', orderDate:'08/20', urgent:false, next:'09/05 설치', amount:3200000 },
+      { brand:'금강제화', client:'금강제화', store:'롯데잠실점', rep:'이현재', orderDate:'08/20', urgent:true, next:'09/08 설치', amount:9800000 },
+      { brand:'금강제화', client:'금강제화', store:'구미점 외 5매장', rep:'이현재', orderDate:'08/22', urgent:false, next:'09/04 설치', amount:14500000 },
+      { brand:'기타', client:'디엔아이', store:'쿠팡 천안8FC', rep:'이현재', orderDate:'08/26', urgent:false, next:'09/09 설치', amount:2100000 },
+      { brand:'K2', client:'본사', store:'신세계아울렛시흥점', rep:'이현재', orderDate:'08/31', urgent:false, next:'09/11 설치', amount:4300000 },
+      { brand:'K2', client:'우리가디자인', store:'모다아울렛경주점', rep:'이현재', orderDate:'08/31', urgent:false, next:'09/03 설치', amount:1800000 },
+      { brand:'기타', client:'디엔아이', store:'일뽀르노 롯데월드몰점 가구', rep:'이현재', orderDate:'08/31', urgent:false, next:'09/03 설치', amount:2600000 },
+      { brand:'PC', client:'PC', store:'청담퀸즈파크점 가구이동', rep:'이재황', orderDate:'09/02', urgent:false, next:'09/28 설치', amount:900000 },
+      { brand:'도무스', client:'도무스', store:'추석연휴', rep:'시스템관리자', orderDate:'09/03', urgent:false, next:'09/24 휴무', amount:null },
+    ];
+
+    let role = appRole === 'owner' ? 'owner' : 'staff';
+    let query = '';
+
+    function fmtWon(n){
+      if (n == null) return '—';
+      return n.toLocaleString('ko-KR') + '원';
+    }
+
+    function renderRoleHint(){
+      root.getElementById('roleHint').textContent = role === 'owner'
+        ? '사장 모드 — 견적금액이 모두 표시됩니다.'
+        : '직원 모드 — 견적금액은 가려집니다. (실제로는 로그인 계정 권한에 따라 자동 적용됩니다)';
+      [...root.querySelectorAll('.role-btn')].forEach(b => b.classList.toggle('active', b.dataset.role === role));
+    }
+
+    function filtered(){
+      if (!query) return orders;
+      return orders.filter(o => (o.brand + o.client + o.store).includes(query));
+    }
+
+    function renderRows(list){
+      const tbody = root.getElementById('orderRows');
+      tbody.innerHTML = list.map((o, i) => `
+        <tr>
+          <td class="mono" style="color:var(--text-faint)">${i + 1}</td>
+          <td class="cell-client">
+            <div class="name">${o.store} ${o.urgent ? '<span class="urgent-tag">긴급</span>' : ''}</div>
+            <div class="brand">${o.brand} · ${o.client}</div>
+          </td>
+          <td>${o.rep}</td>
+          <td class="mono">${o.orderDate}</td>
+          <td>${o.next}</td>
+          <td style="text-align:right">${renderAmount(o.amount)}</td>
+        </tr>
+      `).join('');
+    }
+
+    function renderAmount(n){
+      if (n == null) return '<span class="amount">—</span>';
+      if (role !== 'owner') return '<span class="amount masked mono">🔒 ****,***</span>';
+      return `<span class="amount mono">${fmtWon(n)}</span>`;
+    }
+
+    function renderClientPanel(){
+      const panel = root.getElementById('clientPanel');
+      if (!query) { panel.classList.remove('show'); panel.innerHTML=''; return; }
+      const matches = filtered();
+      if (!matches.length) { panel.classList.remove('show'); panel.innerHTML=''; return; }
+
+      const rep = matches[0];
+      const history = matches;
+      const upcoming = matches.filter(o => o.next && o.next !== '—');
+
+      panel.classList.add('show');
+      panel.innerHTML = `
+        <div class="head">
+          <div>
+            <div class="name">${rep.client}</div>
+            <div class="brand-line">브랜드: ${rep.brand} · 검색결과 ${matches.length}건</div>
+          </div>
+          <button class="close" id="clientClose">✕</button>
+        </div>
+        <div class="client-grid">
+          <div class="client-block">
+            <h3>기본정보</h3>
+            <div class="kv"><span class="k">담당자</span><span class="v">${rep.rep}</span></div>
+            <div class="kv"><span class="k">최근 수주일</span><span class="v">${rep.orderDate}</span></div>
+            <div class="kv"><span class="k">전체 건수</span><span class="v">${history.length}건</span></div>
+          </div>
+          <div class="client-block">
+            <h3>다가오는 일정 (${upcoming.length}건)</h3>
+            ${upcoming.length ? upcoming.map(o => `
+              <div class="inprogress-row">
+                <span>${o.store}${o.urgent ? ' <span class="urgent-tag">긴급</span>' : ''}</span>
+                <span>${o.next}</span>
+              </div>
+            `).join('') : '<div class="inprogress-row"><span>예정된 일정 없음</span></div>'}
+            <div style="margin-top:10px">
+              <button class="more-link" id="historyMore">전체 이력 ${history.length}건 더보기 ▾</button>
+            </div>
+          </div>
+        </div>
+      `;
+      panel.querySelector('#clientClose').addEventListener('click', () => {
+        query = '';
+        root.getElementById('searchInput').value = '';
+        render();
+      });
+      panel.querySelector('#historyMore').addEventListener('click', (e) => {
+        const btn = e.currentTarget;
+        const already = panel.querySelector('.history-full');
+        if (already) { already.remove(); btn.textContent = `전체 이력 ${history.length}건 더보기 ▾`; return; }
+        const box = document.createElement('div');
+        box.className = 'history-full';
+        box.style.marginTop = '10px';
+        box.innerHTML = history.map(o => `
+          <div class="inprogress-row"><span>${o.orderDate} · ${o.store}${o.urgent ? ' <span class="urgent-tag">긴급</span>' : ''}</span><span>${renderAmount(o.amount)}</span></div>
+        `).join('');
+        panel.querySelector('.client-block:last-child').appendChild(box);
+        btn.textContent = '접기 ▴';
+      });
+    }
+
+    function render(){
+      const list = filtered();
+      renderRows(list);
+      renderClientPanel();
+      renderRoleHint();
+    }
+
+    root.getElementById('roleSwitch').addEventListener('click', (e) => {
+      const btn = e.target.closest('.role-btn');
+      if (!btn) return;
+      role = btn.dataset.role;
+      render();
+    });
+    root.getElementById('searchInput').addEventListener('input', (e) => {
+      query = e.target.value.trim();
+      render();
+    });
+
+    render();
+  }
+
+  /* =========================================================
+     Order form init
+     ========================================================= */
+  function initOrderFormPage(root){
+    const STAFF = ['이현재', '박성중', '이재황', '김선우'];
+
+    const BRANDS = ['스타벅스','K2','파리바게뜨','금강제화','노르디스크','커버낫','BK','PC','다이나핏','CG','Lee','파리바게뜨위탁가맹','아이더','모비스','PS','와키윌리','쉐이크쉑','배스킨라빈스','파스쿠찌','베이커리팩토리','기타'];
+    const CLIENTS = {
+      'SB-본사': { contact:'', phone:'', interior:'', address:'' },
+      '디엔아이': { contact:'', phone:'', interior:'', address:'' },
+      '파리바게뜨': { contact:'백상진', phone:'02-2222-3333', interior:'', address:'' },
+      '키예노': { contact:'', phone:'', interior:'', address:'' },
+      '공간디자인': { contact:'', phone:'', interior:'', address:'' },
+      '금강제화': { contact:'조원석', phone:'02-4444-5555', interior:'대한인테리어', address:'' },
+      '우리가디자인': { contact:'', phone:'', interior:'', address:'' },
+      '삼립': { contact:'', phone:'', interior:'', address:'' },
+      '스페이스갬': { contact:'', phone:'', interior:'', address:'' },
+      'PC': { contact:'', phone:'', interior:'', address:'' },
+      '비커밍': { contact:'', phone:'', interior:'', address:'' },
+      '디자인에너지': { contact:'', phone:'', interior:'', address:'' },
+      '큐앤플랜': { contact:'', phone:'', interior:'', address:'' },
+      '파리크라상': { contact:'심배현', phone:'02-1234-5678', interior:'', address:'' },
+      '아이디어뮤토': { contact:'', phone:'', interior:'', address:'' },
+      '에이플러스': { contact:'', phone:'', interior:'', address:'' },
+      '개인': { contact:'', phone:'', interior:'', address:'' },
+    };
+
+    const repSelect = root.getElementById('f-rep');
+    repSelect.innerHTML = '<option value="" disabled selected>담당자 선택</option>' +
+      STAFF.map(name => `<option value="${name}">${name}</option>`).join('');
+
+    root.getElementById('brandList').innerHTML = BRANDS.map(b => `<option value="${b}">`).join('');
+    root.getElementById('clientList').innerHTML = Object.keys(CLIENTS).map(c => `<option value="${c}">`).join('');
+
+    root.getElementById('f-brand').addEventListener('input', (e) => {
+      const v = e.target.value.trim();
+      root.getElementById('brandNewHint').textContent = (v && !BRANDS.includes(v)) ? '새 브랜드로 등록됩니다' : '';
+    });
+
+    root.getElementById('f-client').addEventListener('input', (e) => {
+      const v = e.target.value.trim();
+      const hint = root.getElementById('clientNewHint');
+      const known = CLIENTS[v];
+      if (!v) { hint.textContent = ''; return; }
+      if (!known) { hint.textContent = '새 발주처로 등록됩니다'; return; }
+      hint.textContent = '';
+      root.getElementById('f-clientcontact').value = known.contact || '';
+      root.getElementById('f-clientphone').value = known.phone || '';
+      root.getElementById('f-interior').value = known.interior || '';
+      root.getElementById('f-address').value = known.address || '';
+      const note = root.getElementById('autofillNote');
+      if (known.contact || known.phone || known.interior) {
+        note.style.display = 'block';
+        setTimeout(() => { note.style.display = 'none'; }, 3000);
+      }
+    });
+
+    root.getElementById('orderTypeChips').addEventListener('click', (e) => {
+      const chip = e.target.closest('.chip');
+      if (!chip) return;
+      [...chip.parentElement.children].forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+    });
+
+    root.getElementById('materialChips').addEventListener('click', (e) => {
+      const chip = e.target.closest('.chip');
+      if (!chip) return;
+      [...chip.parentElement.children].forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+    });
+
+    const contactToggle = root.getElementById('contactToggle');
+    const contactBody = root.getElementById('contactBody');
+    contactToggle.addEventListener('click', () => {
+      contactToggle.classList.toggle('open');
+      contactBody.classList.toggle('open');
+    });
+
+    const taskList = root.getElementById('taskList');
+    let taskCount = 0;
+    function addTaskRow(){
+      taskCount++;
+      const row = document.createElement('div');
+      row.className = 'task-row';
+      row.innerHTML = `
+        <div class="task-grid">
+          <div class="field"><label>날짜</label><input type="date"></div>
+          <div class="field"><label>시각</label><input type="time"></div>
+          <div class="field task-full"><label>작업내용</label><input class="task-desc" placeholder="납품 품목"></div>
+          <div class="field task-full">
+            <label>작업량</label>
+            <select class="qty-select">
+              <option value="5">5</option><option value="10">10</option><option value="20" selected>20</option>
+              <option value="30">30</option><option value="40">40</option><option value="50">50</option>
+              <option value="60">60</option><option value="70">70</option><option value="80">80</option>
+              <option value="90">90</option><option value="100">100</option><option value="150">150</option>
+              <option value="200">200</option><option value="300">300</option>
+              <option value="단납">단납</option>
+              <option value="custom">직접입력...</option>
+            </select>
+            <input type="number" class="qty-custom" placeholder="작업량 직접 입력" style="display:none; margin-top:6px;">
+          </div>
+        </div>
+        ${taskCount > 1 ? '<button class="remove-task">삭제</button>' : ''}
+      `;
+      const removeBtn = row.querySelector('.remove-task');
+      if (removeBtn) removeBtn.addEventListener('click', () => row.remove());
+      const qtySelect = row.querySelector('.qty-select');
+      const qtyCustom = row.querySelector('.qty-custom');
+      qtySelect.addEventListener('change', () => {
+        qtyCustom.style.display = qtySelect.value === 'custom' ? 'block' : 'none';
+      });
+      taskList.appendChild(row);
+    }
+    addTaskRow();
+    root.getElementById('addTask').addEventListener('click', addTaskRow);
+
+    root.getElementById('saveBtn').addEventListener('click', () => {
+      alert('시안 데모입니다 — 실제 저장은 데이터베이스 연결 후 동작합니다.');
+    });
+  }
+
+  /* =========================================================
+     Mobile tasks init
+     ========================================================= */
+  function initTasksPage(root){
+    function pad(n){ return String(n).padStart(2,'0'); }
+    function ymd(d){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+    function addDays(base, n){ const d = new Date(base); d.setDate(d.getDate()+n); return d; }
+
+    const today = new Date();
+    today.setHours(0,0,0,0);
+
+    const rawTasks = [
+      { offset:0, time:'09:00', client:'ND 미도인베이커리 본점', type:'납품', task:'비말차단 진열대 납품', qty:5, op:'최민서', done:false },
+      { offset:0, time:'10:30', client:'CG 카페드마르쉐 잠실점', type:'배송', task:'도어틀, 몰딩 배송', qty:10, op:'박성중', done:false },
+      { offset:0, time:'13:00', client:'K2 브레드팜 강남점', type:'납품', task:'진열대 3type 배송', qty:20, op:'김도현', done:true },
+      { offset:0, time:'16:00', client:'CG 카페드마르쉐 잠실점', type:'납품', task:'냉장 쇼케이스 납품', qty:20, op:'최민서', done:false },
+      { offset:1, time:'09:30', client:'KK 라뜰리에드빵 강남점', type:'배송', task:'우드프레임 배송', qty:10, op:'박지훈', done:false },
+      { offset:1, time:'13:00', client:'K2 브레드팜 송파점', type:'납품', task:'진열대 3type 납품', qty:30, op:'최민서', done:false },
+      { offset:2, time:'11:00', client:'K2 브레드팜 강남점', type:'납품', task:'진열대 3type 배송', qty:100, op:'김도현', done:false },
+    ];
+
+    const tasksByDay = {};
+    rawTasks.forEach(t => {
+      const d = addDays(today, t.offset);
+      const key = ymd(d);
+      if (!tasksByDay[key]) tasksByDay[key] = [];
+      tasksByDay[key].push({ ...t, id: Math.random().toString(36).slice(2) });
+    });
+    Object.values(tasksByDay).forEach(list => list.sort((a,b) => a.time.localeCompare(b.time)));
+
+    const WEEKDAYS = ['일','월','화','수','목','금','토'];
+    const days = [0,1,2].map(n => addDays(today, n));
+    let activeDay = ymd(today);
+    let query = '';
+
+    const dayTabs = root.getElementById('dayTabs');
+    days.forEach(d => {
+      const key = ymd(d);
+      const btn = document.createElement('button');
+      btn.className = 'daytab' + (key === activeDay ? ' active' : '');
+      btn.textContent = key === ymd(today) ? '오늘' : `${d.getMonth()+1}/${d.getDate()}(${WEEKDAYS[d.getDay()]})`;
+      btn.addEventListener('click', () => { activeDay = key; render(); });
+      btn.dataset.key = key;
+      dayTabs.appendChild(btn);
+    });
+
+    root.getElementById('searchInput').addEventListener('input', (e) => {
+      query = e.target.value.trim();
+      render();
+    });
+
+    function render(){
+      [...dayTabs.children].forEach(btn => btn.classList.toggle('active', btn.dataset.key === activeDay));
+
+      let list = tasksByDay[activeDay] || [];
+      if (query) list = list.filter(t => t.client.includes(query));
+
+      const total = list.length;
+      const doneCount = list.filter(t => t.done).length;
+      root.getElementById('statTotal').textContent = total;
+      root.getElementById('statDone').textContent = doneCount;
+      root.getElementById('statLeft').textContent = total - doneCount;
+
+      const listEl = root.getElementById('taskList');
+      listEl.innerHTML = '';
+      if (!list.length) {
+        listEl.innerHTML = '<div class="empty">이 날짜에 등록된 작업이 없습니다.</div>';
+        return;
+      }
+      list.forEach(t => {
+        const row = document.createElement('div');
+        row.className = 'task' + (t.done ? ' done' : '');
+        row.innerHTML = `
+          <div class="time mono">${t.time}</div>
+          <div class="body">
+            <div class="client">${t.client}</div>
+            <div class="desc"><span class="type-tag">[${t.type}]</span> ${t.task} · 작업량 ${t.qty}% · ${t.op}</div>
+          </div>
+          <div class="check">✓</div>
+        `;
+        row.addEventListener('click', () => {
+          t.done = !t.done;
+          render();
+        });
+        listEl.appendChild(row);
+      });
+    }
+
+    render();
+  }
+
+  /* =========================================================
+     Revenue page init
+     ========================================================= */
+  function initRevenuePage(root, appRole){
+    const won = n => n.toLocaleString('ko-KR') + '원';
+    const pad2 = n => String(n).padStart(2,'0');
+    const ymd = d => `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+
+    const REP_LIST = ['이현재', '박성중', '이재황', '김선우'];
+
+    const rawRevenue = [
+      { date:'2026-09-01', brand:'파리바게뜨', client:'파리크라상', store:'이수점', rep:'김선우', amount:5200000, confirmed:true, paid:true },
+      { date:'2026-09-02', brand:'K2', client:'K2', store:'브레드팜 강남점', rep:'이현재', amount:3100000, confirmed:true, paid:false },
+      { date:'2026-09-03', brand:'스타벅스', client:'SB-본사', store:'잠실점', rep:'박성중', amount:8600000, confirmed:false, paid:false },
+      { date:'2026-08-20', brand:'CG', client:'디자인에너지', store:'카페드마르쉐 잠실점', rep:'이재황', amount:2400000, confirmed:true, paid:true },
+      { date:'2026-08-15', brand:'금강제화', client:'금강제화', store:'대전역점', rep:'이현재', amount:4500000, confirmed:true, paid:false },
+      { date:'2026-08-05', brand:'BK', client:'개인', store:'판교점', rep:'김선우', amount:1800000, confirmed:true, paid:true },
+      { date:'2026-07-28', brand:'K2', client:'K2', store:'브레드팜 송파점', rep:'이현재', amount:3100000, confirmed:true, paid:true },
+      { date:'2026-07-11', brand:'파리바게뜨', client:'파리크라상', store:'대전역점', rep:'김선우', amount:9000000, confirmed:true, paid:true },
+      { date:'2026-06-30', brand:'노르디스크', client:'비커밍', store:'성수점', rep:'박성중', amount:2200000, confirmed:true, paid:true },
+      { date:'2025-12-10', brand:'파리바게뜨', client:'파리크라상', store:'수원점', rep:'김선우', amount:6100000, confirmed:true, paid:true },
+    ].map((r, i) => ({ ...r, id: i }));
+
+    let revenueTargets = [
+      { id: 1, type: 'month', key: '2026-09', amount: 15000000 },
+      { id: 2, type: 'month', key: '2026-08', amount: 12000000 },
+      { id: 3, type: 'quarter', key: '2026-Q3', amount: 40000000 },
+      { id: 4, type: 'year', key: '2026', amount: 150000000 },
+    ];
+    let targetType = 'month';
+
+    let period = 'month';
+    let brandFilterVal = '전체';
+    let clientFilterVal = '전체';
+    let repFilterVal = '전체';
+    let role = appRole === 'staff' ? 'staff' : 'owner';
+    const maskWon = n => role === 'staff' ? '비공개' : won(n);
+
+    const roleSwitchEl = root.getElementById('roleSwitch');
+    function syncRoleButtons(){
+      [...roleSwitchEl.children].forEach(b => b.classList.toggle('active', b.dataset.role === role));
+    }
+    syncRoleButtons();
+
+    roleSwitchEl.addEventListener('click', (e) => {
+      const btn = e.target.closest('.role-btn');
+      if (!btn) return;
+      [...btn.parentElement.children].forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      role = btn.dataset.role;
+      render();
+    });
+
+    function refreshBrandOptions(){
+      const brands = ['전체', ...new Set(rawRevenue.map(r => r.brand))];
+      const sel = root.getElementById('brandFilter');
+      sel.innerHTML = brands.map(b => `<option value="${b}">${b}</option>`).join('');
+      sel.value = brands.includes(brandFilterVal) ? brandFilterVal : '전체';
+      brandFilterVal = sel.value;
+
+      const clients = ['전체', ...new Set(rawRevenue.map(r => r.client).filter(Boolean))];
+      const clientSel = root.getElementById('clientFilter');
+      clientSel.innerHTML = clients.map(c => `<option value="${c}">${c === '전체' ? '전체 발주처' : c}</option>`).join('');
+      clientSel.value = clients.includes(clientFilterVal) ? clientFilterVal : '전체';
+      clientFilterVal = clientSel.value;
+
+      const reps = ['전체', ...new Set(rawRevenue.map(r => r.rep).filter(Boolean))];
+      const repSel = root.getElementById('repFilter');
+      repSel.innerHTML = reps.map(r => `<option value="${r}">${r === '전체' ? '전체 담당자' : r}</option>`).join('');
+      repSel.value = reps.includes(repFilterVal) ? repFilterVal : '전체';
+      repFilterVal = repSel.value;
+    }
+    refreshBrandOptions();
+    root.getElementById('brandFilter').addEventListener('change', (e) => { brandFilterVal = e.target.value; render(); });
+    root.getElementById('clientFilter').addEventListener('change', (e) => { clientFilterVal = e.target.value; render(); });
+    root.getElementById('repFilter').addEventListener('change', (e) => { repFilterVal = e.target.value; render(); });
+
+    root.getElementById('fileInput').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const statusEl = root.getElementById('uploadStatus');
+      statusEl.textContent = '읽는 중...';
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const data = new Uint8Array(ev.target.result);
+          const wb = XLSX.read(data, { type:'array', cellDates:true });
+          const sheet = wb.Sheets[wb.SheetNames[0]];
+          const rows = XLSX.utils.sheet_to_json(sheet, { defval:'' });
+
+          const pick = (row, keys) => {
+            for (const k of Object.keys(row)) {
+              const norm = k.replace(/\s/g,'');
+              if (keys.some(want => norm.includes(want))) return row[k];
+            }
+            return '';
+          };
+          const toDateStr = (v) => {
+            if (v instanceof Date && !isNaN(v)) return ymd(v);
+            const s = String(v || '').trim();
+            const m = s.match(/(\d{4})[.\-\/](\d{1,2})[.\-\/](\d{1,2})/);
+            if (m) return `${m[1]}-${pad2(m[2])}-${pad2(m[3])}`;
+            return s || ymd(new Date());
+          };
+          const toAmount = (v) => {
+            const n = Number(String(v).replace(/[^0-9.\-]/g,''));
+            return isNaN(n) ? 0 : n;
+          };
+          const toBool = (v) => {
+            const s = String(v).trim();
+            return ['O','o','Y','y','완료','발행','입금','예','true','1'].includes(s);
+          };
+
+          let added = 0;
+          let nextId = rawRevenue.reduce((m,r)=>Math.max(m,r.id),0) + 1;
+          rows.forEach(row => {
+            const brand = pick(row, ['브랜드']);
+            const client = pick(row, ['발주처','거래처']);
+            const store = pick(row, ['점포','매장']);
+            const dateRaw = pick(row, ['SET일','일자','날짜','수금일','확정일']);
+            const amountRaw = pick(row, ['확정금액','견적금액','금액']);
+            const confirmedRaw = pick(row, ['확인','발행']);
+            const paidRaw = pick(row, ['수금','입금']);
+            const repRaw = pick(row, ['담당자','영업사원','담당']);
+            if (!brand && !client && !store && !amountRaw) return;
+            rawRevenue.push({
+              id: nextId++,
+              date: toDateStr(dateRaw),
+              brand: String(brand || '미분류'),
+              client: String(client || ''),
+              store: String(store || ''),
+              rep: String(repRaw || '미배정'),
+              amount: toAmount(amountRaw),
+              confirmed: toBool(confirmedRaw),
+              paid: toBool(paidRaw),
+            });
+            added++;
+          });
+
+          refreshBrandOptions();
+          render();
+          statusEl.textContent = `${added}건 추가됨 (${file.name})`;
+        } catch (err) {
+          statusEl.textContent = '파일을 읽지 못했습니다. 컬럼명을 확인해주세요.';
+        }
+        e.target.value = '';
+      };
+      reader.readAsArrayBuffer(file);
+    });
+
+    root.getElementById('periodTabs').addEventListener('click', (e) => {
+      const tab = e.target.closest('.tab');
+      if (!tab) return;
+      [...tab.parentElement.children].forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      period = tab.dataset.p;
+      render();
+    });
+
+    const PERIOD_LABEL = { month:'월별', quarter:'분기별', year:'년도별', brand:'브랜드별', client:'발주처별' };
+
+    function groupKey(r){
+      if (period === 'month') return r.date.slice(0,7);
+      if (period === 'quarter') return quarterOf(r.date);
+      if (period === 'year') return r.date.slice(0,4);
+      if (period === 'client') return r.client || '(미상)';
+      return r.brand;
+    }
+
+    function groupLabel(key){
+      if (period === 'month') { const [y,m] = key.split('-'); return `${y}년 ${Number(m)}월`; }
+      if (period === 'quarter') { const [y,q] = key.split('-Q'); return `${y}년 ${q}분기`; }
+      if (period === 'year') return `${key}년`;
+      return key;
+    }
+
+    function updateFilterVisibility(){
+      root.getElementById('brandFilter').style.display = period === 'brand' ? '' : 'none';
+      root.getElementById('clientFilter').style.display = period === 'client' ? '' : 'none';
+    }
+
+    function render(){
+      updateFilterVisibility();
+      let list = rawRevenue.filter(r =>
+        (brandFilterVal === '전체' || r.brand === brandFilterVal) &&
+        (clientFilterVal === '전체' || r.client === clientFilterVal) &&
+        (repFilterVal === '전체' || r.rep === repFilterVal)
+      );
+
+      const total = list.reduce((s,r) => s + r.amount, 0);
+      const paid = list.filter(r => r.paid).reduce((s,r) => s + r.amount, 0);
+      const unpaid = list.filter(r => r.confirmed && !r.paid).reduce((s,r) => s + r.amount, 0);
+      const unconfirmed = list.filter(r => !r.confirmed).length;
+
+      root.getElementById('periodLabel').textContent = `${PERIOD_LABEL[period]} 전체 확정금액`;
+      root.getElementById('statTotal').textContent = maskWon(total);
+      root.getElementById('statPaid').textContent = maskWon(paid);
+      root.getElementById('statUnpaid').textContent = maskWon(unpaid);
+      root.getElementById('statUnconfirmed').textContent = `${unconfirmed}건`;
+
+      const groups = new Map();
+      list.forEach(r => {
+        const key = groupKey(r);
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(r);
+      });
+      const groupKeysSorted = [...groups.keys()].sort((a,b) => (period === 'brand' || period === 'client') ? a.localeCompare(b,'ko') : b.localeCompare(a));
+
+      const tbody = root.getElementById('tbody');
+      tbody.innerHTML = '';
+      if (!groupKeysSorted.length) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:var(--text-faint); padding:24px;">해당 조건의 내역이 없습니다.</td></tr>';
+      } else {
+        groupKeysSorted.forEach(key => {
+          const rows = groups.get(key).sort((a,b) => b.date.localeCompare(a.date));
+          const groupTotal = rows.reduce((s,r) => s + r.amount, 0);
+
+          const headTr = document.createElement('tr');
+          headTr.className = 'group-head';
+          headTr.innerHTML = `
+            <td colspan="5">${groupLabel(key)} <span style="font-weight:400; color:var(--text-faint)">· ${rows.length}건</span></td>
+            <td class="amount">${maskWon(groupTotal)}</td>
+            <td class="center"></td><td class="center"></td>
+          `;
+          tbody.appendChild(headTr);
+
+          rows.forEach(r => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td class="mono">${r.date}</td>
+              <td>${r.brand}</td>
+              <td>${r.client}</td>
+              <td>${r.store}</td>
+              <td>${r.rep || '-'}</td>
+              <td class="amount">${maskWon(r.amount)}</td>
+              <td class="center"><button class="check-pill ${r.confirmed ? 'on' : ''}" data-id="${r.id}" data-k="confirmed">${r.confirmed ? '확인됨' : '확인 대기'}</button></td>
+              <td class="center"><button class="check-pill pay ${r.paid ? 'on' : ''}" data-id="${r.id}" data-k="paid">${r.paid ? '입금완료' : '미입금'}</button></td>
+            `;
+            tbody.appendChild(tr);
+          });
+        });
+
+        const grandTr = document.createElement('tr');
+        grandTr.className = 'grand-total';
+        grandTr.innerHTML = `
+          <td colspan="5">합계 <span style="font-weight:400; color:var(--text-faint)">· ${list.length}건</span></td>
+          <td class="amount">${maskWon(total)}</td>
+          <td class="center"></td><td class="center"></td>
+        `;
+        tbody.appendChild(grandTr);
+      }
+      tbody.querySelectorAll('.check-pill').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const rec = rawRevenue.find(r => r.id == btn.dataset.id);
+          rec[btn.dataset.k] = !rec[btn.dataset.k];
+          render();
+        });
+      });
+
+      const totalCount = list.length;
+      root.getElementById('tableFoot').textContent = `${PERIOD_LABEL[period]} 기준 · ${groupKeysSorted.length}개 그룹 · 브랜드: ${brandFilterVal} · 발주처: ${clientFilterVal} · 담당자: ${repFilterVal} · 총 ${totalCount}건`;
+
+      renderAnalysis();
+      renderTargets();
+    }
+
+    function quarterOf(dateStr){
+      const [y,m] = dateStr.split('-').map(Number);
+      return `${y}-Q${Math.ceil(m/3)}`;
+    }
+    function keyForType(r, type){
+      if (type === 'month') return r.date.slice(0,7);
+      if (type === 'quarter') return quarterOf(r.date);
+      return r.date.slice(0,4);
+    }
+    function targetKeyLabel(type, key){
+      if (type === 'month') { const [y,m] = key.split('-'); return `${y}년 ${Number(m)}월`; }
+      if (type === 'quarter') { const [y,q] = key.split('-Q'); return `${y}년 ${q}분기`; }
+      return `${key}년`;
+    }
+    const TARGET_KEY_HINT = {
+      month: '월간 형식: YYYY-MM (예: 2026-09)',
+      quarter: '분기 형식: YYYY-Q분기 (예: 2026-Q3)',
+      year: '연간 형식: YYYY (예: 2026)',
+    };
+    const TARGET_KEY_PATTERN = {
+      month: /^\d{4}-\d{2}$/,
+      quarter: /^\d{4}-Q[1-4]$/,
+      year: /^\d{4}$/,
+    };
+
+    root.getElementById('targetTabs').addEventListener('click', (e) => {
+      const tab = e.target.closest('.tab');
+      if (!tab) return;
+      [...tab.parentElement.children].forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      targetType = tab.dataset.t;
+      root.getElementById('targetFormHint').textContent = TARGET_KEY_HINT[targetType];
+      root.getElementById('targetKeyInput').placeholder = targetType === 'month' ? '2026-09' : targetType === 'quarter' ? '2026-Q3' : '2026';
+      renderTargets();
+    });
+
+    root.getElementById('addTargetBtn').addEventListener('click', () => {
+      const keyInput = root.getElementById('targetKeyInput');
+      const amountInput = root.getElementById('targetAmountInput');
+      const key = keyInput.value.trim();
+      const amount = Number(amountInput.value);
+      if (!TARGET_KEY_PATTERN[targetType].test(key)) {
+        alert(`${TARGET_KEY_HINT[targetType]} 형식으로 입력해주세요.`);
+        return;
+      }
+      if (!amount || amount <= 0) {
+        alert('목표 금액을 입력해주세요.');
+        return;
+      }
+      const existing = revenueTargets.find(t => t.type === targetType && t.key === key);
+      if (existing) {
+        existing.amount = amount;
+      } else {
+        const nextId = revenueTargets.reduce((m,t) => Math.max(m,t.id), 0) + 1;
+        revenueTargets.push({ id: nextId, type: targetType, key, amount });
+      }
+      keyInput.value = '';
+      amountInput.value = '';
+      renderTargets();
+    });
+
+    function renderTargets(){
+      const panel = root.getElementById('targetPanel');
+      const locked = root.getElementById('targetLocked');
+      if (role !== 'owner') {
+        panel.style.display = 'none';
+        locked.style.display = 'block';
+        return;
+      }
+      panel.style.display = '';
+      locked.style.display = 'none';
+
+      const rows = revenueTargets.filter(t => t.type === targetType).sort((a,b) => b.key.localeCompare(a.key));
+      const body = root.getElementById('targetBody');
+      if (!rows.length) {
+        body.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-faint); padding:16px;">등록된 목표가 없습니다.</td></tr>';
+        return;
+      }
+      body.innerHTML = rows.map(t => {
+        const actual = rawRevenue.filter(r => keyForType(r, t.type) === t.key).reduce((s,r) => s + r.amount, 0);
+        const pct = t.amount > 0 ? (actual / t.amount * 100) : 0;
+        const barClass = pct >= 100 ? 'ok' : pct >= 70 ? 'warn' : 'danger';
+        return `
+          <tr>
+            <td>${targetKeyLabel(t.type, t.key)}</td>
+            <td class="amount">${won(t.amount)}</td>
+            <td class="amount">${won(actual)}</td>
+            <td>
+              <div class="target-progress-wrap">
+                <div class="bar-track"><div class="bar-fill ${barClass}" style="width:${Math.min(pct,100).toFixed(0)}%"></div></div>
+                <span class="target-pct">${pct.toFixed(0)}%</span>
+              </div>
+            </td>
+            <td class="center"><button class="target-del" data-id="${t.id}" title="삭제">✕</button></td>
+          </tr>
+        `;
+      }).join('');
+      body.querySelectorAll('.target-del').forEach(btn => {
+        btn.addEventListener('click', () => {
+          revenueTargets = revenueTargets.filter(t => t.id != btn.dataset.id);
+          renderTargets();
+        });
+      });
+    }
+
+    function renderAnalysis(){
+      const panel = root.getElementById('analysisPanel');
+      const locked = root.getElementById('analysisLocked');
+      if (role !== 'owner') {
+        panel.style.display = 'none';
+        locked.style.display = 'block';
+        return;
+      }
+      panel.style.display = '';
+      locked.style.display = 'none';
+
+      const byMonth = new Map();
+      rawRevenue.forEach(r => {
+        const key = r.date.slice(0,7);
+        byMonth.set(key, (byMonth.get(key) || 0) + r.amount);
+      });
+      const months = [...byMonth.keys()].sort();
+      const svgW = 560, svgH = 180, padL = 8, padR = 8, padT = 16, padB = 22;
+      const plotW = svgW - padL - padR, plotH = svgH - padT - padB;
+      const maxAmt = Math.max(1, ...months.map(m => byMonth.get(m)));
+      const stepX = months.length > 1 ? plotW / (months.length - 1) : 0;
+      const xOf = i => padL + i * stepX;
+      const yOf = v => padT + plotH - (v / maxAmt) * plotH;
+
+      let svg = '';
+      for (let g = 0; g <= 2; g++) {
+        const gy = padT + (plotH / 2) * g;
+        svg += `<line class="grid-line" x1="${padL}" y1="${gy}" x2="${svgW-padR}" y2="${gy}"/>`;
+      }
+      svg += `<line class="axis-line" x1="${padL}" y1="${padT+plotH}" x2="${svgW-padR}" y2="${padT+plotH}"/>`;
+
+      if (months.length) {
+        const pathD = months.map((m,i) => `${i===0?'M':'L'}${xOf(i).toFixed(1)},${yOf(byMonth.get(m)).toFixed(1)}`).join(' ');
+        svg += `<path class="trend-line" d="${pathD}"/>`;
+        months.forEach((m,i) => {
+          svg += `<circle class="trend-dot" cx="${xOf(i).toFixed(1)}" cy="${yOf(byMonth.get(m)).toFixed(1)}" r="3"/>`;
+        });
+        const lastI = months.length - 1;
+        svg += `<text class="trend-label" x="${xOf(lastI)-4}" y="${yOf(byMonth.get(months[lastI]))-8}" text-anchor="end">${won(byMonth.get(months[lastI]))}</text>`;
+        let peakI = 0;
+        months.forEach((m,i) => { if (byMonth.get(m) > byMonth.get(months[peakI])) peakI = i; });
+        if (peakI !== lastI) {
+          svg += `<text class="trend-label" x="${xOf(peakI)}" y="${yOf(byMonth.get(months[peakI]))-8}" text-anchor="middle">${won(byMonth.get(months[peakI]))}</text>`;
+        }
+        svg += `<text class="axis-label" x="${padL}" y="${svgH-6}" text-anchor="start">${groupLabelFor(months[0])}</text>`;
+        svg += `<text class="axis-label" x="${svgW-padR}" y="${svgH-6}" text-anchor="end">${groupLabelFor(months[lastI])}</text>`;
+      }
+      root.getElementById('monthlyChart').innerHTML = svg;
+      root.getElementById('monthlyChartSub').textContent = months.length
+        ? `${months.length}개월 데이터 · 월평균 ${won(Math.round([...byMonth.values()].reduce((a,b)=>a+b,0) / months.length))}`
+        : '데이터 없음';
+
+      const byBrand = new Map();
+      rawRevenue.forEach(r => { byBrand.set(r.brand, (byBrand.get(r.brand) || 0) + r.amount); });
+      const totalAll = [...byBrand.values()].reduce((a,b)=>a+b,0) || 1;
+      const brandRows = [...byBrand.entries()].sort((a,b) => b[1]-a[1]);
+      const maxBrandAmt = brandRows.length ? brandRows[0][1] : 1;
+      root.getElementById('brandShareBody').innerHTML = brandRows.map(([b,amt]) => `
+        <tr>
+          <td class="mt-name">${b}</td>
+          <td class="mt-bar"><div class="bar-track"><div class="bar-fill" style="width:${(amt/maxBrandAmt*100).toFixed(0)}%"></div></div></td>
+          <td class="mt-pct">${(amt/totalAll*100).toFixed(0)}%</td>
+        </tr>
+      `).join('') || '<tr><td colspan="3" style="color:var(--text-faint)">데이터 없음</td></tr>';
+
+      const confirmedTotal = rawRevenue.filter(r => r.confirmed).reduce((s,r)=>s+r.amount,0);
+      const paidTotal = rawRevenue.filter(r => r.paid).reduce((s,r)=>s+r.amount,0);
+      const collectRate = confirmedTotal > 0 ? (paidTotal / confirmedTotal * 100) : 0;
+      root.getElementById('collectRate').textContent = `${collectRate.toFixed(0)}%`;
+
+      const unpaidList = rawRevenue.filter(r => r.confirmed && !r.paid);
+      const unpaidAmt = unpaidList.reduce((s,r)=>s+r.amount,0);
+      root.getElementById('unpaidSummary').textContent = `${unpaidList.length}건 · ${won(unpaidAmt)}`;
+
+      root.getElementById('topBrand').textContent = brandRows.length ? brandRows[0][0] : '-';
+    }
+
+    function groupLabelFor(monthKey){
+      const [y,m] = monthKey.split('-');
+      return `${y}.${m}`;
+    }
+
+    render();
+  }
+
+  /* =========================================================
+     Analytics page init (owner-only view content; static data)
+     ========================================================= */
+  function initAnalyticsPage(root){
+    const DATA = {"kpi": {"totalOrders": 908, "uniqueClients": 33, "uniqueBrands": 33, "avg2025": 41.1, "avg2026": 46.1, "growthPct": 12.2, "top4SharePct": 47.5, "top10SharePct": 80.0}, "monthly": [{"month": "2025-01", "count": 31}, {"month": "2025-02", "count": 46}, {"month": "2025-03", "count": 53}, {"month": "2025-04", "count": 32}, {"month": "2025-05", "count": 33}, {"month": "2025-06", "count": 49}, {"month": "2025-07", "count": 50}, {"month": "2025-08", "count": 68}, {"month": "2025-09", "count": 33}, {"month": "2025-10", "count": 34}, {"month": "2025-11", "count": 32}, {"month": "2025-12", "count": 32}, {"month": "2026-01", "count": 47}, {"month": "2026-02", "count": 52}, {"month": "2026-03", "count": 86}, {"month": "2026-04", "count": 42}, {"month": "2026-05", "count": 25}, {"month": "2026-06", "count": 40}, {"month": "2026-07", "count": 72}, {"month": "2026-08", "count": 40}, {"month": "2026-09", "count": 11}], "pareto": [{"name": "디엔아이", "count": 107, "pct": 15.5, "cumPct": 15.5}, {"name": "파리바게뜨", "count": 86, "pct": 12.5, "cumPct": 28.0}, {"name": "SB-본사", "count": 80, "pct": 11.6, "cumPct": 39.6}, {"name": "키예노", "count": 55, "pct": 8.0, "cumPct": 47.5}, {"name": "공간디자인", "count": 53, "pct": 7.7, "cumPct": 55.2}, {"name": "금강제화", "count": 51, "pct": 7.4, "cumPct": 62.6}, {"name": "우리가디자인", "count": 42, "pct": 6.1, "cumPct": 68.7}, {"name": "삼립", "count": 29, "pct": 4.2, "cumPct": 72.9}, {"name": "스페이스갬", "count": 27, "pct": 3.9, "cumPct": 76.8}, {"name": "본사", "count": 22, "pct": 3.2, "cumPct": 80.0}, {"name": "금속", "count": 22, "pct": 3.2, "cumPct": 83.2}, {"name": "PC", "count": 21, "pct": 3.0, "cumPct": 86.2}], "brand": [{"code": "K2", "count": 121, "rushPct": 0.0}, {"code": "-", "count": 100, "rushPct": 0.0}, {"code": "PB", "count": 86, "rushPct": 1.2}, {"code": "SB", "count": 80, "rushPct": 52.5}, {"code": "KK", "count": 51, "rushPct": 2.0}, {"code": "ND", "count": 41, "rushPct": 0.0}, {"code": "커버낫", "count": 36, "rushPct": 13.9}, {"code": "BK", "count": 25, "rushPct": 0.0}, {"code": "금속", "count": 22, "rushPct": 100.0}, {"code": "PC", "count": 18, "rushPct": 0.0}], "rep": [{"name": "이현재", "count": 404, "rushPct": 3.2}, {"name": "박성중", "count": 313, "rushPct": 59.4}, {"name": "이재황", "count": 110, "rushPct": 5.5}, {"name": "김선우", "count": 62, "rushPct": 17.7}, {"name": "황성철", "count": 16, "rushPct": 0.0}, {"name": "시스템관리자", "count": 3, "rushPct": 100.0}], "weekday": [{"day": "월", "count": 142}, {"day": "화", "count": 141}, {"day": "수", "count": 158}, {"day": "목", "count": 162}, {"day": "금", "count": 169}, {"day": "토", "count": 93}, {"day": "일", "count": 43}], "pipeline": [{"brand": "커버낫", "client": "공간디자인", "store": "현대아울렛 대전점-몰딩배송", "rep": "박성중", "date": "2026-08-12"}, {"brand": "금강제화", "client": "금강제화", "store": "광주점(재도장건)", "rep": "이현재", "date": "2026-07-01"}, {"brand": "PC", "client": "PC", "store": "예술의전당", "rep": "이재황", "date": "2026-03-16"}, {"brand": "BK", "client": "삼립", "store": "롯데제타플렉스잠실", "rep": "이재황", "date": "2026-03-16"}, {"brand": "파리바게뜨", "client": "파리바게뜨", "store": "향남부영사랑점", "rep": "황성철", "date": "2026-01-16"}, {"brand": "파리바게뜨", "client": "파리바게뜨", "store": "연천역", "rep": "황성철", "date": "2025-12-04"}, {"brand": "금강제화", "client": "금강제화", "store": "광주점 행거납품", "rep": "이현재", "date": "2025-12-18"}, {"brand": "파리바게뜨", "client": "파리바게뜨", "store": "노량진2호점", "rep": "황성철", "date": "2025-12-01"}], "urgent": [{"brand": "금강제화", "client": "금강제화", "store": "롯데부산본점 추가", "rep": "이현재", "date": "2026-08-21"}, {"brand": "금강제화", "client": "금강제화", "store": "롯데부산본점", "rep": "이현재", "date": "2026-07-31"}, {"brand": "배스킨라빈스", "client": "BR", "store": "노량진점-이원", "rep": "박성중", "date": "2026-03-30"}, {"brand": "K2", "client": "우리가디자인", "store": "대구광장점", "rep": "이현재", "date": "2025-08-11"}]};
+
+    const won = n => n.toLocaleString('ko-KR');
+
+    const kpiRow = root.getElementById('kpiRow');
+    const kpis = [
+      { label: '전체 수주 건수', value: won(DATA.kpi.totalOrders) + '건', note: '2025-01 ~ 2026-09' },
+      { label: '활성 발주처 수', value: DATA.kpi.uniqueClients + '곳', note: '' },
+      { label: '월평균 증감', value: `+${DATA.kpi.growthPct}%`, note: `'25 ${DATA.kpi.avg2025}건 → '26 ${DATA.kpi.avg2026}건`, up: true },
+      { label: '상위 4곳 비중', value: DATA.kpi.top4SharePct + '%', note: '디엔아이·파리바게뜨·SB·키예노' },
+      { label: '상위 10곳 비중', value: DATA.kpi.top10SharePct + '%', note: '거래처 쏠림 매우 높음' },
+      { label: '최다 담당자', value: DATA.rep[0].name, note: `${DATA.rep[0].count}건 (${(DATA.rep[0].count/DATA.kpi.totalOrders*100).toFixed(0)}%)` },
+    ];
+    kpiRow.innerHTML = kpis.map(k => `
+      <div class="kpi">
+        <div class="label">${k.label}</div>
+        <div class="value${k.up ? ' up' : ''}">${k.value}</div>
+        <div class="note">${k.note}</div>
+      </div>
+    `).join('');
+
+    (function(){
+      const svg = root.getElementById('monthlyChart');
+      const W = 720, H = 220, padL = 34, padR = 12, padT = 16, padB = 26;
+      const data = DATA.monthly;
+      const maxV = Math.max(...data.map(d => d.count));
+      const niceMax = Math.ceil(maxV / 20) * 20;
+      const x = i => padL + (i / (data.length - 1)) * (W - padL - padR);
+      const y = v => H - padB - (v / niceMax) * (H - padT - padB);
+
+      let svgHTML = '';
+      [0, niceMax/2, niceMax].forEach(v => {
+        const yy = y(v);
+        svgHTML += `<line class="grid-line" x1="${padL}" y1="${yy}" x2="${W-padR}" y2="${yy}"/>`;
+        svgHTML += `<text class="axis-label" x="${padL-6}" y="${yy+3}" text-anchor="end">${v}</text>`;
+      });
+      data.forEach((d, i) => {
+        if (i % 3 === 0 || i === data.length - 1) {
+          svgHTML += `<text class="axis-label" x="${x(i)}" y="${H-8}" text-anchor="middle">${d.month.slice(2)}</text>`;
+        }
+      });
+      let areaPts = data.map((d,i) => `${x(i)},${y(d.count)}`).join(' ');
+      svgHTML += `<polygon class="area-path" points="${padL},${y(0)} ${areaPts} ${x(data.length-1)},${y(0)}"/>`;
+      let linePts = data.map((d,i) => `${x(i)},${y(d.count)}`).join(' ');
+      svgHTML += `<polyline class="line-path" points="${linePts}"/>`;
+      const peakIdx = data.reduce((best,d,i,arr) => d.count > arr[best].count ? i : best, 0);
+      data.forEach((d,i) => {
+        if (i === peakIdx) {
+          svgHTML += `<circle class="dot-peak" cx="${x(i)}" cy="${y(d.count)}" r="4"/>`;
+          svgHTML += `<text class="bar-label" x="${x(i)}" y="${y(d.count)-9}" text-anchor="middle">${d.month} · ${d.count}건</text>`;
+        } else if (i === data.length - 1) {
+          svgHTML += `<circle class="dot" cx="${x(i)}" cy="${y(d.count)}" r="3.5"/>`;
+          svgHTML += `<text class="bar-label" x="${x(i)}" y="${y(d.count)-9}" text-anchor="middle">${d.count}건</text>`;
+        }
+      });
+      svg.innerHTML = svgHTML;
+      root.getElementById('monthlyFoot').textContent =
+        `2025년 월평균 ${DATA.kpi.avg2025}건 → 2026년(1~9월) 월평균 ${DATA.kpi.avg2026}건 (+${DATA.kpi.growthPct}%) · 최고치 ${data[peakIdx].month} ${data[peakIdx].count}건`;
+    })();
+
+    (function(){
+      const rows = DATA.pareto.map(p => `
+        <tr>
+          <td>${p.name}</td>
+          <td class="num">${p.count}건</td>
+          <td class="num">${p.pct}%</td>
+          <td class="num" style="font-weight:600">${p.cumPct}%</td>
+        </tr>
+      `).join('');
+      root.getElementById('paretoTable').innerHTML = `
+        <thead><tr><th>발주처</th><th style="text-align:right">건수</th><th style="text-align:right">비중</th><th style="text-align:right">누적</th></tr></thead>
+        <tbody>${rows}</tbody>
+      `;
+      root.getElementById('paretoFoot').textContent =
+        `상위 4곳이 전체의 ${DATA.kpi.top4SharePct}%, 상위 10곳이 ${DATA.kpi.top10SharePct}%를 차지 — 소수 거래처 의존도가 매우 높은 구조`;
+    })();
+
+    (function(){
+      const svg = root.getElementById('brandChart');
+      const W = 640, rowH = 24, gap = 4, padL = 60, padR = 90, padT = 8;
+      const data = DATA.brand;
+      const H = padT + data.length * (rowH + gap);
+      const maxV = 100;
+      const barW = v => (v / maxV) * (W - padL - padR);
+
+      let svgHTML = '';
+      data.forEach((d, i) => {
+        const yy = padT + i * (rowH + gap);
+        const w = barW(d.rushPct);
+        svgHTML += `<text class="bar-name" x="${padL-8}" y="${yy+rowH/2+4}" text-anchor="end">${d.code}</text>`;
+        svgHTML += `<rect class="bar-track" x="${padL}" y="${yy}" width="${W-padL-padR}" height="${rowH}" rx="4"/>`;
+        svgHTML += `<rect class="bar" x="${padL}" y="${yy}" width="${Math.max(w,3)}" height="${rowH}" rx="4"/>`;
+        svgHTML += `<text class="bar-label" x="${padL + (W-padL-padR) + 8}" y="${yy+rowH/2+4}">${d.rushPct}% 단납 · ${d.count}건</text>`;
+      });
+      svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+      svg.innerHTML = svgHTML;
+    })();
+
+    (function(){
+      function rushBadge(pct){
+        const cls = pct >= 30 ? 'high' : pct >= 10 ? 'mid' : 'low';
+        return `<span class="badge-rush ${cls}">${pct}%</span>`;
+      }
+      const rows = DATA.rep.filter(r => r.name !== '시스템관리자').map(r => `
+        <tr>
+          <td>${r.name}</td>
+          <td class="num">${r.count}건</td>
+          <td class="num">${(r.count/DATA.kpi.totalOrders*100).toFixed(1)}%</td>
+          <td style="text-align:right">${rushBadge(r.rushPct)}</td>
+        </tr>
+      `).join('');
+      root.getElementById('repTable').innerHTML = `
+        <thead><tr><th>담당자</th><th style="text-align:right">건수</th><th style="text-align:right">비중</th><th style="text-align:right">단납비율</th></tr></thead>
+        <tbody>${rows}</tbody>
+      `;
+    })();
+
+    (function(){
+      const svg = root.getElementById('weekdayChart');
+      const W = 480, H = 200, padL = 28, padR = 8, padT = 10, padB = 24;
+      const data = DATA.weekday;
+      const maxV = Math.max(...data.map(d => d.count));
+      const niceMax = Math.ceil(maxV / 20) * 20;
+      const bw = (W - padL - padR) / data.length;
+      const y = v => H - padB - (v / niceMax) * (H - padT - padB);
+
+      let svgHTML = '';
+      [0, niceMax/2, niceMax].forEach(v => {
+        const yy = y(v);
+        svgHTML += `<line class="grid-line" x1="${padL}" y1="${yy}" x2="${W-padR}" y2="${yy}"/>`;
+        svgHTML += `<text class="axis-label" x="${padL-6}" y="${yy+3}" text-anchor="end">${v}</text>`;
+      });
+      const maxIdx = data.reduce((best,d,i,arr)=> d.count>arr[best].count?i:best, 0);
+      data.forEach((d,i) => {
+        const cx = padL + i*bw + bw/2;
+        const barW = Math.min(bw*0.5, 24);
+        const yy = y(d.count);
+        svgHTML += `<rect class="bar" x="${cx-barW/2}" y="${yy}" width="${barW}" height="${H-padB-yy}" rx="4"${i===maxIdx?' opacity="1"':' opacity="0.55"'}/>`;
+        svgHTML += `<text class="bar-label" x="${cx}" y="${yy-6}" text-anchor="middle">${d.count}</text>`;
+        svgHTML += `<text class="axis-label" x="${cx}" y="${H-8}" text-anchor="middle">${d.day}</text>`;
+      });
+      svg.innerHTML = svgHTML;
+      root.getElementById('weekdayFoot').textContent =
+        `금요일이 ${data[maxIdx].count}건으로 가장 많고, 일요일이 가장 적음 — 인력 배치 참고자료로 활용 가능`;
+    })();
+
+    function smallTable(rows){
+      return `
+        <thead><tr><th>발주처</th><th>점포명</th><th>담당자</th><th>수주일</th></tr></thead>
+        <tbody>${rows.map(r => `
+          <tr><td>${r.client}</td><td class="muted">${r.store}</td><td>${r.rep}</td><td class="num">${r.date}</td></tr>
+        `).join('')}</tbody>
+      `;
+    }
+    root.getElementById('pipelineTable').innerHTML = smallTable(DATA.pipeline);
+    root.getElementById('urgentTable').innerHTML = smallTable(DATA.urgent);
+  }
+
+  /* =========================================================
+     Custom elements
+     ========================================================= */
+  class DomusSchedulePage extends HTMLElement {
+    connectedCallback(){
+      if (this._mounted) return; this._mounted = true;
+      mountPage(this, 'tpl-schedule', scheduleCSS, (root) => initSchedulePage(root));
+    }
+  }
+  class DomusSalesPage extends HTMLElement {
+    connectedCallback(){
+      if (this._mounted) return; this._mounted = true;
+      mountPage(this, 'tpl-sales', salesCSS, (root) => initSalesPage(root, window.currentRole));
+    }
+  }
+  class DomusOrderFormPage extends HTMLElement {
+    connectedCallback(){
+      if (this._mounted) return; this._mounted = true;
+      mountPage(this, 'tpl-orderform', orderFormCSS, (root) => initOrderFormPage(root));
+    }
+  }
+  class DomusTasksPage extends HTMLElement {
+    connectedCallback(){
+      if (this._mounted) return; this._mounted = true;
+      mountPage(this, 'tpl-tasks', tasksCSS, (root) => initTasksPage(root));
+    }
+  }
+  class DomusRevenuePage extends HTMLElement {
+    connectedCallback(){
+      if (this._mounted) return; this._mounted = true;
+      mountPage(this, 'tpl-revenue', revenueCSS, (root) => initRevenuePage(root, window.currentRole));
+    }
+  }
+  class DomusAnalyticsPage extends HTMLElement {
+    connectedCallback(){
+      if (this._mounted) return; this._mounted = true;
+      mountPage(this, 'tpl-analytics', analyticsCSS, (root) => initAnalyticsPage(root));
+    }
+  }
+
+  customElements.define('domus-schedule-page', DomusSchedulePage);
+  customElements.define('domus-sales-page', DomusSalesPage);
+  customElements.define('domus-orderform-page', DomusOrderFormPage);
+  customElements.define('domus-tasks-page', DomusTasksPage);
+  customElements.define('domus-revenue-page', DomusRevenuePage);
+  customElements.define('domus-analytics-page', DomusAnalyticsPage);
+
+  /* =========================================================
+     App shell: login, nav, view switching
+     ========================================================= */
+  window.currentRole = null;
+
+  const NAV_ITEMS = [
+    { key:'schedule', label:'일정표', icon:'📅' },
+    { key:'orderform', label:'+ 신규 등록', icon:'➕' },
+    { key:'sales', label:'영업관리', icon:'🗂️' },
+    { key:'revenue', label:'매출관리', icon:'💰' },
+    { key:'analytics', label:'경영 분석', icon:'📊', ownerOnly:true },
+  ];
+
+  let activeView = 'schedule';
+
+  function buildNav(){
+    const navGroup = document.getElementById('navGroup');
+    navGroup.innerHTML = '';
+    NAV_ITEMS.forEach(item => {
+      if (item.ownerOnly && window.currentRole !== 'owner') return; // skip entirely for staff
+      const btn = document.createElement('button');
+      btn.className = 'nav-btn' + (item.key === activeView ? ' active' : '');
+      btn.dataset.view = item.key;
+      btn.innerHTML = `<span class="ic">${item.icon}</span><span class="label">${item.label}</span>`;
+      btn.addEventListener('click', () => switchView(item.key));
+      navGroup.appendChild(btn);
+    });
+  }
+
+  function setSidebarHidden(hide){
+    document.getElementById('appShell').classList.toggle('sidebar-hidden', hide);
+  }
+
+  function switchView(view){
+    activeView = view;
+    document.querySelectorAll('.view-page').forEach(p => {
+      p.hidden = p.dataset.view !== view;
+    });
+    document.querySelectorAll('.nav-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.view === view);
+    });
+    // 일정표는 TV/모니터 상시 게시용 화면이라 메뉴를 고르고 나면 사이드바를 자동으로 접는다.
+    // 다른 메뉴로 이동하면 다시 펼쳐진다. 접혔을 때는 좌측 하단 ☰ 버튼으로 다시 펼칠 수 있다.
+    setSidebarHidden(view === 'schedule');
+  }
+
+  function enterApp(role){
+    window.currentRole = role;
+    document.getElementById('roleIndicatorText').textContent = role === 'owner' ? '사장' : '직원';
+    buildNav();
+    activeView = 'schedule';
+    switchView('schedule');
+    document.getElementById('loginScreen').hidden = true;
+    document.getElementById('appShell').hidden = false;
+  }
+
+  function doLogout(){
+    window.currentRole = null;
+    document.getElementById('appShell').hidden = true;
+    document.getElementById('loginScreen').hidden = false;
+  }
+
+  document.getElementById('loginOwnerBtn').addEventListener('click', () => enterApp('owner'));
+  document.getElementById('loginStaffBtn').addEventListener('click', () => enterApp('staff'));
+  document.getElementById('logoutBtn').addEventListener('click', doLogout);
+  document.getElementById('sidebarToggleBtn').addEventListener('click', () => setSidebarHidden(false));
+
+})();
+</script>
+</body>
+</html>
